@@ -6,6 +6,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import helmet from '@fastify/helmet';
 import { registerAuth } from './auth.js';
+import { registerNotes } from './routes/notes.js';
 
 function requireEnv(name: string, minLength = 1): string {
   const value = process.env[name];
@@ -62,6 +63,9 @@ async function start() {
 
   // Auth routes and middleware
   await registerAuth(app, resolvedNotesDir);
+
+  // Notes API
+  await registerNotes(app, resolvedNotesDir);
 
   // Health check (public)
   app.get('/api/v1/health', async () => {
