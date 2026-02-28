@@ -5,6 +5,7 @@ import type { SaveStatus } from '../hooks/useAutoSave.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 import CodeMirrorEditor from './CodeMirrorEditor.js';
 import Preview from './Preview.js';
+import ConflictDialog from './ConflictDialog.js';
 
 type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -30,6 +31,8 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
       return <span style={{ ...style, color: 'var(--text-secondary)' }}>Saved</span>;
     case 'error':
       return <span style={{ ...style, color: 'var(--danger)' }}>Save failed</span>;
+    case 'conflict':
+      return <span style={{ ...style, color: 'var(--danger)' }}>Conflict</span>;
   }
 }
 
@@ -90,6 +93,7 @@ export default function EditorPane() {
   const notes = useStore((s) => s.notes);
   const selectNote = useStore((s) => s.selectNote);
   const searchFn = useStore((s) => s.search);
+  const conflict = useStore((s) => s.conflict);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   // Track live content for preview in split mode
   const [liveContent, setLiveContent] = useState<string>('');
@@ -272,6 +276,7 @@ export default function EditorPane() {
           </div>
         )}
       </div>
+      {conflict && <ConflictDialog />}
     </div>
   );
 }

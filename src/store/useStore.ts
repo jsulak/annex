@@ -6,6 +6,13 @@ function generateId(): string {
   return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
 }
 
+interface ConflictInfo {
+  noteId: string;
+  localBody: string;
+  serverBody: string;
+  serverEtag: string;
+}
+
 interface AppState {
   notes: NoteIndex[];
   selectedId: string | null;
@@ -18,6 +25,9 @@ interface AppState {
   historyIndex: number;
   quickOpenVisible: boolean;
   _navigatingHistory: boolean;
+  conflict: ConflictInfo | null;
+  hasPendingEdits: boolean;
+  pendingBody: string | null;
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   deselectNote: () => void;
@@ -27,6 +37,9 @@ interface AppState {
   upsertNoteFromSSE: (id: string) => Promise<void>;
   removeNoteFromSSE: (id: string) => void;
   reloadSelectedNote: (id: string) => Promise<void>;
+  setConflict: (conflict: ConflictInfo | null) => void;
+  setHasPendingEdits: (value: boolean, body?: string | null) => void;
+  resolveConflict: (choice: 'local' | 'server') => Promise<void>;
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
   logout: () => Promise<void>;
@@ -49,6 +62,9 @@ export const useStore = create<AppState>((set, get) => ({
   historyIndex: -1,
   quickOpenVisible: false,
   _navigatingHistory: false,
+  conflict: null,
+  hasPendingEdits: false,
+  pendingBody: null,
 
   fetchNotes: async () => {
     set({ loading: true });
@@ -173,16 +189,67 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   reloadSelectedNote: async (id: string) => {
-    const { selectedId } = get();
+    const { selectedId, hasPendingEdits } = get();
     if (selectedId !== id) return;
     try {
       const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
       if (res.ok) {
         const note: NoteDetail = await res.json();
-        set({ selectedNote: note });
+        if (hasPendingEdits) {
+          const { pendingBody, selectedNote } = get();
+          get().setConflict({
+            noteId: id,
+            localBody: pendingBody ?? selectedNote?.body ?? '',
+            serverBody: note.body,
+            serverEtag: note.etag,
+          });
+        } else {
+          set({ selectedNote: note });
+        }
       }
     } catch {
       // Ignore fetch errors
+    }
+  },
+
+  setConflict: (conflict: ConflictInfo | null) => set({ conflict }),
+
+  setHasPendingEdits: (value: boolean, body?: string | null) =>
+    set({ hasPendingEdits: value, pendingBody: value ? (body ?? get().pendingBody) : null }),
+
+  resolveConflict: async (choice: 'local' | 'server') => {
+    const { conflict } = get();
+    if (!conflict) return;
+
+    if (choice === 'local') {
+      // Force-PUT the user's version (no If-Match)
+      try {
+        const res = await apiFetch(
+          `/api/v1/notes/${encodeURIComponent(conflict.noteId)}`,
+          { method: 'PUT', body: JSON.stringify({ body: conflict.localBody }) },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          set((s) => ({
+            conflict: null,
+            hasPendingEdits: false,
+            selectedNote: s.selectedNote
+              ? { ...s.selectedNote, body: conflict.localBody, etag: data.etag }
+              : null,
+          }));
+        }
+      } catch {
+        // Keep conflict open on network error
+      }
+    } else {
+      // Accept server version
+      set((s) => ({
+        conflict: null,
+        hasPendingEdits: false,
+        selectedNote: s.selectedNote
+          ? { ...s.selectedNote, body: conflict.serverBody, etag: conflict.serverEtag }
+          : null,
+      }));
     }
   },
 
