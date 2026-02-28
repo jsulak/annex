@@ -6,6 +6,7 @@ import type { CompletionProviders } from '../editor/autocomplete.js';
 import CodeMirrorEditor from './CodeMirrorEditor.js';
 import Preview from './Preview.js';
 import ConflictDialog from './ConflictDialog.js';
+import BacklinksPanel from './BacklinksPanel.js';
 
 type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -276,6 +277,7 @@ export default function EditorPane() {
           </div>
         )}
       </div>
+      <BacklinksPanel selectedId={selectedId} />
       {conflict && <ConflictDialog />}
     </div>
   );

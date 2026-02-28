@@ -139,6 +139,49 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     return { ok: true, filename };
   });
 
+  // GET /api/v1/notes/:id/backlinks — notes that link to this note
+  app.get('/api/v1/notes/:id/backlinks', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const filename = await findFileById(notesDir, id);
+
+    if (!filename) {
+      return reply.status(404).send({ error: 'Note not found' });
+    }
+
+    // Parse the target note to get its title for matching
+    const [targetBody, { mtime: targetMtime }] = await Promise.all([
+      readNoteFile(notesDir, filename),
+      statNoteFile(notesDir, filename),
+    ]);
+    const targetNote = parseNote(filename, targetBody, targetMtime);
+    const targetTitle = targetNote.title.toLowerCase();
+
+    const files = await listNoteFiles(notesDir);
+    const backlinks: NoteIndex[] = [];
+
+    for (const f of files) {
+      if (f === filename) continue; // skip self
+      try {
+        const [body, { mtime }] = await Promise.all([
+          readNoteFile(notesDir, f),
+          statNoteFile(notesDir, f),
+        ]);
+        const note = parseNote(f, body, mtime);
+        const hasLink = note.links.some(
+          (link) => link.toLowerCase() === id.toLowerCase() || link.toLowerCase() === targetTitle,
+        );
+        if (hasLink) {
+          backlinks.push(note);
+        }
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    backlinks.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+    return backlinks;
+  });
+
   // POST /api/v1/notes/:id/rename — rename note file
   app.post('/api/v1/notes/:id/rename', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
