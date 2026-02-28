@@ -44,13 +44,13 @@ export default function NoteList() {
     (e: React.KeyboardEvent) => {
       if (displayNotes.length === 0) return;
 
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown' || e.key === 'j') {
         e.preventDefault();
         const next = focusIndex === null ? 0 : Math.min(focusIndex + 1, displayNotes.length - 1);
         setFocusIndex(next);
         scrollIntoView(next);
         selectNote(displayNotes[next].id);
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
         // At the top of the list, return focus to the search input
         if (focusIndex === null || focusIndex === 0) {
