@@ -102,18 +102,25 @@ export default function NoteList() {
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setFocusIndex((prev) => {
-          const next = prev === null ? 0 : Math.min(prev + 1, displayNotes.length - 1);
-          scrollIntoView(next);
-          return next;
-        });
+        const next = focusIndex === null ? 0 : Math.min(focusIndex + 1, displayNotes.length - 1);
+        setFocusIndex(next);
+        scrollIntoView(next);
+        selectNote(displayNotes[next].id);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setFocusIndex((prev) => {
-          const next = prev === null ? 0 : Math.max(prev - 1, 0);
-          scrollIntoView(next);
-          return next;
-        });
+        // At the top of the list, return focus to the search input
+        if (focusIndex === null || focusIndex === 0) {
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) {
+            searchInput.focus();
+            setFocusIndex(null);
+            return;
+          }
+        }
+        const next = Math.max((focusIndex ?? 0) - 1, 0);
+        setFocusIndex(next);
+        scrollIntoView(next);
+        selectNote(displayNotes[next].id);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const idx = focusIndex ?? 0;
@@ -128,8 +135,9 @@ export default function NoteList() {
   const handleFocus = useCallback(() => {
     if (focusIndex === null && displayNotes.length > 0) {
       setFocusIndex(0);
+      selectNote(displayNotes[0].id);
     }
-  }, [focusIndex, displayNotes.length]);
+  }, [focusIndex, displayNotes, selectNote]);
 
   if (loading || searchLoading) {
     return (
@@ -149,6 +157,7 @@ export default function NoteList() {
 
   return (
     <div
+      id="note-list"
       ref={listRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
