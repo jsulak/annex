@@ -52,7 +52,7 @@ npm run setup
 - [x] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
 - [x] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
 - [x] SSE file watcher (chokidar, /events endpoint, useSSE hook)
-- [ ] Navigation (back/forward, Quick Open)
+- [x] Navigation (back/forward, Quick Open)
 - [ ] Conflict detection (etag, If-Match, 409 handling)
 - [ ] Tags modal + Backlinks panel
 - [ ] Settings panel (all options via PUT /config)

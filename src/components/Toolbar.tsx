@@ -10,6 +10,10 @@ export default function Toolbar() {
   const searchQuery = useStore((s) => s.searchQuery);
   const createNote = useStore((s) => s.createNote);
   const deselectNote = useStore((s) => s.deselectNote);
+  const goBack = useStore((s) => s.goBack);
+  const goForward = useStore((s) => s.goForward);
+  const canGoBack = useStore((s) => s.canGoBack());
+  const canGoForward = useStore((s) => s.canGoForward());
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,6 +126,42 @@ export default function Toolbar() {
         background: 'var(--bg-app)',
       }}
     >
+      <button
+        title="Back (Cmd+[)"
+        disabled={!canGoBack}
+        onClick={goBack}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '14px',
+          padding: '4px 8px',
+          border: '1px solid var(--border)',
+          borderRadius: '2px',
+          background: 'var(--bg-app)',
+          color: canGoBack ? 'var(--text-primary)' : 'var(--text-secondary)',
+          cursor: canGoBack ? 'pointer' : 'default',
+          opacity: canGoBack ? 1 : 0.4,
+        }}
+      >
+        &#x25C0;
+      </button>
+      <button
+        title="Forward (Cmd+])"
+        disabled={!canGoForward}
+        onClick={goForward}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '14px',
+          padding: '4px 8px',
+          border: '1px solid var(--border)',
+          borderRadius: '2px',
+          background: 'var(--bg-app)',
+          color: canGoForward ? 'var(--text-primary)' : 'var(--text-secondary)',
+          cursor: canGoForward ? 'pointer' : 'default',
+          opacity: canGoForward ? 1 : 0.4,
+        }}
+      >
+        &#x25B6;
+      </button>
       <input
         id="search-input"
         ref={inputRef}
