@@ -21,6 +21,7 @@
     "bcrypt": "^6.0.0",
     "codemirror": "^6.0.2",
     "fastify": "^5.7.4",
+    "flexsearch": "^0.8.212",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

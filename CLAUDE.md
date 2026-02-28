@@ -47,7 +47,7 @@ npm run setup
 - [x] Frontend scaffold (login page, two-panel layout, theme CSS vars, Vite proxy)
 - [x] Note list + editor (fetch list, CodeMirror on click)
 - [x] Save (auto-save debounced + Cmd+S)
-- [ ] Search (Flexsearch index, /search endpoint, omnibar highlighting)
+- [x] Search (Flexsearch index, /search endpoint, omnibar highlighting)
 - [ ] New / delete notes (ID gen, trash deletion, filename-from-first-line)
 - [ ] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
 - [ ] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)

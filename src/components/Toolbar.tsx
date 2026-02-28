@@ -1,7 +1,79 @@
+import { useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../store/useStore.js';
+
+const DEBOUNCE_MS = 150;
 
 export default function Toolbar() {
   const logout = useStore((s) => s.logout);
+  const search = useStore((s) => s.search);
+  const clearSearch = useStore((s) => s.clearSearch);
+  const searchQuery = useStore((s) => s.searchQuery);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+
+      if (value.trim() === '') {
+        clearSearch();
+        return;
+      }
+
+      timerRef.current = setTimeout(() => {
+        search(value.trim());
+      }, DEBOUNCE_MS);
+    },
+    [search, clearSearch],
+  );
+
+  // Cmd+L and / to focus the omnibar
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Cmd+L or Ctrl+L
+      if (e.key === 'l' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        return;
+      }
+
+      // "/" to focus — but only if not already in an input or editor
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          (active as HTMLElement)?.closest?.('.cm-editor')
+        ) {
+          return;
+        }
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    };
+
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  // Escape to clear and blur
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Escape') {
+        if (inputRef.current) {
+          inputRef.current.value = '';
+        }
+        clearSearch();
+        inputRef.current?.blur();
+      }
+    },
+    [clearSearch],
+  );
 
   return (
     <div
@@ -15,9 +87,12 @@ export default function Toolbar() {
       }}
     >
       <input
+        ref={inputRef}
         type="text"
-        placeholder="Search..."
-        disabled
+        placeholder="Search... (/ or Cmd+L)"
+        defaultValue={searchQuery}
+        onChange={handleInput}
+        onKeyDown={handleKeyDown}
         style={{
           flex: 1,
           fontFamily: 'var(--font-mono)',
@@ -26,7 +101,7 @@ export default function Toolbar() {
           border: '1px solid var(--border)',
           borderRadius: '2px',
           background: 'var(--bg-editor)',
-          color: 'var(--text-secondary)',
+          color: 'var(--text-primary)',
           outline: 'none',
         }}
       />

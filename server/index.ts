@@ -7,6 +7,8 @@ import fastifySession from '@fastify/session';
 import helmet from '@fastify/helmet';
 import { registerAuth } from './auth.js';
 import { registerNotes } from './routes/notes.js';
+import { registerSearch } from './routes/search.js';
+import { buildIndex } from './lib/searchIndex.js';
 
 function requireEnv(name: string, minLength = 1): string {
   const value = process.env[name];
@@ -66,6 +68,13 @@ async function start() {
 
   // Notes API
   await registerNotes(app, resolvedNotesDir);
+
+  // Search API
+  await registerSearch(app);
+
+  // Build search index
+  const indexed = await buildIndex(resolvedNotesDir);
+  console.log(`Search index built: ${indexed} notes indexed`);
 
   // Health check (public)
   app.get('/api/v1/health', async () => {
