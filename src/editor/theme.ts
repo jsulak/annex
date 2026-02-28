@@ -1,4 +1,24 @@
 import { EditorView } from '@codemirror/view';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
+
+const highlightStyle = HighlightStyle.define([
+  { tag: tags.heading1, fontWeight: '700', fontSize: '1.4em' },
+  { tag: tags.heading2, fontWeight: '700', fontSize: '1.2em' },
+  { tag: tags.heading3, fontWeight: '700', fontSize: '1.1em' },
+  { tag: [tags.heading4, tags.heading5, tags.heading6], fontWeight: '700' },
+  { tag: tags.strong, fontWeight: '700' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.strikethrough, textDecoration: 'line-through' },
+  { tag: tags.link, class: 'cmt-link' },
+  { tag: tags.url, class: 'cmt-url' },
+  { tag: tags.monospace, class: 'cmt-monospace' },
+  { tag: tags.quote, class: 'cmt-quote' },
+  { tag: [tags.processingInstruction, tags.contentSeparator], class: 'cmt-meta' },
+  { tag: tags.labelName, class: 'cmt-link' }, // reference-style link labels
+]);
+
+export const zettelHighlight = syntaxHighlighting(highlightStyle);
 
 export const zettelTheme = EditorView.theme({
   '&': {
@@ -41,5 +61,24 @@ export const zettelTheme = EditorView.theme({
   '.cm-tooltip-autocomplete': {
     fontFamily: 'var(--font-mono)',
     fontSize: '12px',
+  },
+  '.cmt-link': {
+    color: 'var(--text-accent)',
+  },
+  '.cmt-url': {
+    color: 'var(--text-accent)',
+    opacity: '0.7',
+  },
+  '.cmt-monospace': {
+    background: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
+    borderRadius: '2px',
+    padding: '0 2px',
+  },
+  '.cmt-quote': {
+    color: 'var(--text-secondary)',
+    fontStyle: 'italic',
+  },
+  '.cmt-meta': {
+    color: 'var(--text-secondary)',
   },
 });
