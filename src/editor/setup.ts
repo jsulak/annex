@@ -10,6 +10,7 @@ import { zettelTheme, zettelHighlight, listMarkTag, quoteMarkTag } from './theme
 import { wikiLinks } from './wikilinks.js';
 import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
 import { listIndent } from './listIndent.js';
+import { linkDecorations } from './linkDecorations.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
@@ -40,6 +41,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     placeholder('Start writing...'),
     listIndent,
     wikiLinks(callbacks.onNavigate, callbacks.onSearchTag),
+    linkDecorations(),
     zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
