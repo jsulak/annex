@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useSSE } from '../hooks/useSSE.js';
+import { useNoteNavigation } from '../hooks/useNoteNavigation.js';
 import Toolbar from './Toolbar.js';
 import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
+import QuickOpen from './QuickOpen.js';
 
 const STORAGE_KEY = 'zettelweb-panel-width';
 const DEFAULT_WIDTH = 280;
@@ -23,8 +25,10 @@ function getSavedWidth(): number {
 
 export default function AppLayout() {
   const fetchNotes = useStore((s) => s.fetchNotes);
+  const quickOpenVisible = useStore((s) => s.quickOpenVisible);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
+  useNoteNavigation();
   const dragging = useRef(false);
 
   useEffect(() => {
@@ -104,6 +108,7 @@ export default function AppLayout() {
           <EditorPane />
         </div>
       </div>
+      {quickOpenVisible && <QuickOpen />}
     </div>
   );
 }

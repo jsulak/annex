@@ -14,6 +14,10 @@ interface AppState {
   searchQuery: string;
   searchResults: SearchResult[] | null;
   searchLoading: boolean;
+  history: string[];
+  historyIndex: number;
+  quickOpenVisible: boolean;
+  _navigatingHistory: boolean;
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   deselectNote: () => void;
@@ -26,6 +30,11 @@ interface AppState {
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
   logout: () => Promise<void>;
+  goBack: () => void;
+  goForward: () => void;
+  canGoBack: () => boolean;
+  canGoForward: () => boolean;
+  setQuickOpenVisible: (visible: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -36,6 +45,10 @@ export const useStore = create<AppState>((set, get) => ({
   searchQuery: '',
   searchResults: null,
   searchLoading: false,
+  history: [],
+  historyIndex: -1,
+  quickOpenVisible: false,
+  _navigatingHistory: false,
 
   fetchNotes: async () => {
     set({ loading: true });
@@ -56,7 +69,23 @@ export const useStore = create<AppState>((set, get) => ({
       const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
       if (res.ok) {
         const note: NoteDetail = await res.json();
-        set({ selectedNote: note });
+        const { _navigatingHistory, history, historyIndex } = get();
+        if (_navigatingHistory) {
+          set({ selectedNote: note, _navigatingHistory: false });
+        } else {
+          // Skip push if already at this ID
+          if (history[historyIndex] === id) {
+            set({ selectedNote: note });
+          } else {
+            // Truncate any forward entries and push
+            const newHistory = [...history.slice(0, historyIndex + 1), id];
+            set({
+              selectedNote: note,
+              history: newHistory,
+              historyIndex: newHistory.length - 1,
+            });
+          }
+        }
       }
     } catch {
       set({ selectedId: null });
@@ -81,12 +110,16 @@ export const useStore = create<AppState>((set, get) => ({
     if (res.ok) {
       const note: NoteDetail = await res.json();
       const { body: _, etag: __, ...noteIndex } = note;
+      const { history, historyIndex } = get();
+      const newHistory = [...history.slice(0, historyIndex + 1), note.id];
       set((s) => ({
         notes: [noteIndex as NoteIndex, ...s.notes],
         selectedId: note.id,
         selectedNote: note,
         searchQuery: '',
         searchResults: null,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
       }));
     }
   },
@@ -175,4 +208,34 @@ export const useStore = create<AppState>((set, get) => ({
     await apiFetch('/api/v1/auth/logout', { method: 'POST' });
     window.location.href = '/';
   },
+
+  goBack: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      set({ historyIndex: newIndex, _navigatingHistory: true });
+      get().selectNote(history[newIndex]);
+    }
+  },
+
+  goForward: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      set({ historyIndex: newIndex, _navigatingHistory: true });
+      get().selectNote(history[newIndex]);
+    }
+  },
+
+  canGoBack: () => {
+    const { historyIndex } = get();
+    return historyIndex > 0;
+  },
+
+  canGoForward: () => {
+    const { history, historyIndex } = get();
+    return historyIndex < history.length - 1;
+  },
+
+  setQuickOpenVisible: (visible: boolean) => set({ quickOpenVisible: visible }),
 }));
