@@ -97,9 +97,9 @@ export default function Preview({ body, onNavigate, onSearchTag }: Props) {
         padding: '16px',
         maxWidth: '680px',
         margin: '0 auto',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 'var(--font-size-editor, 13px)',
-        lineHeight: '1.6',
+        fontFamily: 'var(--font-prose)',
+        fontSize: 'calc(var(--font-size-editor, 13px) + 4px)',
+        lineHeight: '1.7',
         color: 'var(--text-primary)',
       }}
     />

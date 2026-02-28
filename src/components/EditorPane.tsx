@@ -169,10 +169,10 @@ export default function EditorPane() {
     await deleteNote(selectedId);
   }, [selectedId, selectedNote, deleteNote, cancelPending]);
 
-  // Cmd+P / Ctrl+P — cycle view mode
+  // Cmd+E / Ctrl+E — cycle view mode
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'p' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+      if (e.key === 'e' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
         e.preventDefault();
         setViewMode((prev) => {
           if (prev === 'edit') return 'preview';
