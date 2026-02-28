@@ -54,6 +54,14 @@ export default function Toolbar() {
         e.preventDefault();
         inputRef.current?.focus();
         inputRef.current?.select();
+        return;
+      }
+
+      // Escape to focus search — but not if already in the search input
+      if (e.key === 'Escape' && document.activeElement !== inputRef.current) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
       }
     };
 
@@ -89,7 +97,7 @@ export default function Toolbar() {
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search... (/ or Cmd+L)"
+        placeholder="Search... (Esc / Cmd+L)"
         defaultValue={searchQuery}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
