@@ -38,13 +38,6 @@ export default function Toolbar() {
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+N or Ctrl+N — new note
-      if (e.key === 'n' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
-        e.preventDefault();
-        createNote();
-        return;
-      }
-
       // Cmd+L or Ctrl+L
       if (e.key === 'l' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -81,7 +74,7 @@ export default function Toolbar() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [createNote, deselectNote]);
+  }, [deselectNote]);
 
   const searchResults = useStore((s) => s.searchResults);
 
@@ -183,7 +176,7 @@ export default function Toolbar() {
         }}
       />
       <button
-        title="New note (Cmd+N)"
+        title="New note"
         onClick={() => createNote()}
         style={{
           fontFamily: 'var(--font-mono)',
