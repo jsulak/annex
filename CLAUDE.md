@@ -44,7 +44,7 @@ npm run setup
 - [x] Server scaffold (Fastify, NOTES_DIR env, static serving, health check)
 - [x] Auth (setup CLI, login route, bcrypt, session cookie, route protection)
 - [x] File store + Notes API (CRUD + rename, path safety)
-- [ ] Frontend scaffold (login page, two-panel layout, theme CSS vars, Vite proxy)
+- [x] Frontend scaffold (login page, two-panel layout, theme CSS vars, Vite proxy)
 - [ ] Note list + editor (fetch list, CodeMirror on click)
 - [ ] Save (auto-save debounced + Cmd+S)
 - [ ] Search (Flexsearch index, /search endpoint, omnibar highlighting)
