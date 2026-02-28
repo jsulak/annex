@@ -147,7 +147,7 @@ Files must be **fully compatible** with The Archive so they can be opened in eit
 ### 7.1 Filename Convention
 
 ```
-YYYYMMDDHHMMSS Note Title.md
+YYYYMMDDHHMM Note Title.md
 ```
 
 Example: `202401151432 On the nature of ideas.md`
@@ -355,7 +355,7 @@ Sort by last modified (default), created, or title. Keyboard navigation with `�
 Omnibar always visible. `Cmd/Ctrl+L` or `/` to focus. 150ms debounce. Match highlighting in list and editor. Saved searches (`Cmd/Ctrl+Shift+S`) persisted via config API.
 
 ### 13.3 Note Editor
-CodeMirror 6 with Markdown mode. `[[` autocomplete for note links. `#` autocomplete for tags. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable). Typewriter mode (`Cmd/Ctrl+Shift+T`).
+CodeMirror 6 with Markdown mode. `[[` autocomplete for note links — selecting a note from the dropdown inserts its numeric ID (e.g. `[[202601280000]]`), which is stable across title renames. `#` autocomplete for tags. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable). Typewriter mode (`Cmd/Ctrl+Shift+T`).
 
 ### 13.4 Preview Mode
 Toggle Edit / Preview / Split with `Cmd/Ctrl+P`. Renders CommonMark + GFM. Images served via `/assets/:filename`. Wiki-links and `#tags` are clickable. External URLs open in new tab.
