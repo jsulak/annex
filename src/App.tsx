@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import LoginPage from './components/LoginPage.js';
+import AppLayout from './components/AppLayout.js';
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -23,19 +24,5 @@ export default function App() {
     return <LoginPage onLogin={() => setAuthed(true)} />;
   }
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: 'var(--bg-app)',
-      }}
-    >
-      <p style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-        Logged in. App shell coming soon.
-      </p>
-    </div>
-  );
+  return <AppLayout />;
 }
