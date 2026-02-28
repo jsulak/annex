@@ -1,7 +1,8 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useAutoSave } from '../hooks/useAutoSave.js';
 import type { SaveStatus } from '../hooks/useAutoSave.js';
+import type { CompletionProviders } from '../editor/autocomplete.js';
 import CodeMirrorEditor from './CodeMirrorEditor.js';
 
 function SaveIndicator({ status }: { status: SaveStatus }) {
@@ -33,9 +34,44 @@ export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
   const selectedId = useStore((s) => s.selectedId);
   const deleteNote = useStore((s) => s.deleteNote);
+  const notes = useStore((s) => s.notes);
+  const selectNote = useStore((s) => s.selectNote);
   const { handleChange, saveNow, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
+  );
+
+  // Navigate to a wiki-linked note by title or ID
+  const handleNavigate = useCallback(
+    (target: string) => {
+      const lower = target.toLowerCase();
+      const found = notes.find(
+        (n) =>
+          n.id === target ||
+          n.title.toLowerCase() === lower ||
+          n.filename.toLowerCase().includes(lower),
+      );
+      if (found) {
+        selectNote(found.id);
+      }
+    },
+    [notes, selectNote],
+  );
+
+  // Completion providers for [[ and # autocomplete
+  const completionProviders: CompletionProviders = useMemo(
+    () => ({
+      getNotes: () =>
+        useStore.getState().notes.map((n) => ({ id: n.id, title: n.title })),
+      getTags: () => {
+        const tagSet = new Set<string>();
+        for (const n of useStore.getState().notes) {
+          for (const t of n.tags) tagSet.add(t);
+        }
+        return [...tagSet].sort();
+      },
+    }),
+    [],
   );
 
   // Cmd+Backspace (Mac) or Ctrl+Delete (Windows) to delete note
@@ -48,7 +84,6 @@ export default function EditorPane() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+Backspace (Mac) or Ctrl+Delete (Windows/Linux)
       const isMacDelete = e.metaKey && e.key === 'Backspace';
       const isCtrlDelete = e.ctrlKey && e.key === 'Delete';
       if (isMacDelete || isCtrlDelete) {
@@ -112,6 +147,8 @@ export default function EditorPane() {
         doc={selectedNote.body}
         onUpdate={handleChange}
         saveNow={saveNow}
+        onNavigate={handleNavigate}
+        completionProviders={completionProviders}
       />
     </div>
   );

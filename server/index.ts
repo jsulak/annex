@@ -8,6 +8,7 @@ import helmet from '@fastify/helmet';
 import { registerAuth } from './auth.js';
 import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
+import { registerTags } from './routes/tags.js';
 import { buildIndex } from './lib/searchIndex.js';
 
 function requireEnv(name: string, minLength = 1): string {
@@ -71,6 +72,9 @@ async function start() {
 
   // Search API
   await registerSearch(app);
+
+  // Tags API
+  await registerTags(app, resolvedNotesDir);
 
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);
