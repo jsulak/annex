@@ -5,7 +5,8 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { zettelTheme, zettelHighlight } from './theme.js';
+import { styleTags } from '@lezer/highlight';
+import { zettelTheme, zettelHighlight, listMarkTag, quoteMarkTag } from './theme.js';
 import { wikiLinks } from './wikilinks.js';
 import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
 import { listIndent } from './listIndent.js';
@@ -19,7 +20,17 @@ export interface EditorCallbacks {
 
 export function createExtensions(callbacks: EditorCallbacks): Extension[] {
   return [
-    markdown({ codeLanguages: languages }),
+    markdown({
+      codeLanguages: languages,
+      extensions: [{
+        props: [
+          styleTags({
+            ListMark: listMarkTag,
+            QuoteMark: quoteMarkTag,
+          }),
+        ],
+      }],
+    }),
     zettelTheme,
     zettelHighlight,
     EditorView.lineWrapping,
