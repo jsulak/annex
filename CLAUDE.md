@@ -49,13 +49,16 @@ npm run setup
 - [x] Save (auto-save debounced + Cmd+S)
 - [x] Search (Flexsearch index, /search endpoint, omnibar highlighting)
 - [x] New / delete notes (ID gen, trash deletion, filename-from-first-line)
-- [x] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
+- [x] Wiki-links + tags (parser, editor autocomplete, clickable in preview, clickable tags in editor)
 - [x] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
 - [x] SSE file watcher (chokidar, /events endpoint, useSSE hook)
 - [x] Navigation (back/forward, Quick Open)
 - [x] Conflict detection (etag, If-Match, 409 handling)
 - [x] Tags modal + Backlinks panel
-- [x] Settings panel (all options via PUT /config)
+- [x] Settings panel (all options via PUT /config, live font size)
+- [x] Delete button in editor pane + fixed deletion (apiFetch Content-Type fix)
+- [x] Wiki-link autocomplete inserts note ID instead of title
+- [x] Faded markdown formatting marks (##, *, _) with darker list/quote marks
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [ ] Deploy tooling (deploy.sh, ecosystem.config.js, Caddyfile.example)
