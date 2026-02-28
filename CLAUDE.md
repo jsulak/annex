@@ -50,7 +50,7 @@ npm run setup
 - [x] Search (Flexsearch index, /search endpoint, omnibar highlighting)
 - [x] New / delete notes (ID gen, trash deletion, filename-from-first-line)
 - [x] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
-- [ ] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
+- [x] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
 - [ ] SSE file watcher (chokidar, /events endpoint, useSSE hook)
 - [ ] Navigation (back/forward, Quick Open)
 - [ ] Conflict detection (etag, If-Match, 409 handling)
