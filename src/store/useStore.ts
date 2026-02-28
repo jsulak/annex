@@ -20,6 +20,9 @@ interface AppState {
   updateEtag: (etag: string) => void;
   createNote: (title?: string) => Promise<void>;
   deleteNote: (id: string) => Promise<boolean>;
+  upsertNoteFromSSE: (id: string) => Promise<void>;
+  removeNoteFromSSE: (id: string) => void;
+  reloadSelectedNote: (id: string) => Promise<void>;
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
   logout: () => Promise<void>;
@@ -102,6 +105,52 @@ export const useStore = create<AppState>((set, get) => ({
       return true;
     }
     return false;
+  },
+
+  upsertNoteFromSSE: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const detail: NoteDetail = await res.json();
+        const { body: _, etag: __, ...noteIndex } = detail;
+        set((s) => {
+          const existing = s.notes.findIndex((n) => n.id === id);
+          let notes: NoteIndex[];
+          if (existing >= 0) {
+            notes = [...s.notes];
+            notes[existing] = noteIndex as NoteIndex;
+          } else {
+            notes = [...s.notes, noteIndex as NoteIndex];
+          }
+          notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+          return { notes };
+        });
+      }
+    } catch {
+      // Ignore fetch errors from SSE updates
+    }
+  },
+
+  removeNoteFromSSE: (id: string) => {
+    set((s) => ({
+      notes: s.notes.filter((n) => n.id !== id),
+      selectedId: s.selectedId === id ? null : s.selectedId,
+      selectedNote: s.selectedId === id ? null : s.selectedNote,
+    }));
+  },
+
+  reloadSelectedNote: async (id: string) => {
+    const { selectedId } = get();
+    if (selectedId !== id) return;
+    try {
+      const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const note: NoteDetail = await res.json();
+        set({ selectedNote: note });
+      }
+    } catch {
+      // Ignore fetch errors
+    }
   },
 
   search: async (query: string) => {

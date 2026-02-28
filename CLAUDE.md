@@ -51,7 +51,7 @@ npm run setup
 - [x] New / delete notes (ID gen, trash deletion, filename-from-first-line)
 - [x] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
 - [x] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
-- [ ] SSE file watcher (chokidar, /events endpoint, useSSE hook)
+- [x] SSE file watcher (chokidar, /events endpoint, useSSE hook)
 - [ ] Navigation (back/forward, Quick Open)
 - [ ] Conflict detection (etag, If-Match, 409 handling)
 - [ ] Tags modal + Backlinks panel

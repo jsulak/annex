@@ -9,7 +9,9 @@ import { registerAuth } from './auth.js';
 import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
 import { registerTags } from './routes/tags.js';
+import { registerEvents } from './routes/events.js';
 import { buildIndex } from './lib/searchIndex.js';
+import { startWatcher } from './lib/watcher.js';
 
 function requireEnv(name: string, minLength = 1): string {
   const value = process.env[name];
@@ -76,9 +78,15 @@ async function start() {
   // Tags API
   await registerTags(app, resolvedNotesDir);
 
+  // SSE events endpoint
+  await registerEvents(app);
+
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);
   console.log(`Search index built: ${indexed} notes indexed`);
+
+  // Start file watcher (after index is built)
+  await startWatcher(resolvedNotesDir);
 
   // Health check (public)
   app.get('/api/v1/health', async () => {
