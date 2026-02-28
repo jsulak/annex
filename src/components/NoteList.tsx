@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '../store/useStore.js';
 import type { NoteIndex, SearchResult } from '../types.js';
 
@@ -88,6 +88,13 @@ export default function NoteList() {
   // Show search results when searching, otherwise all notes
   const displayNotes: Array<NoteIndex | SearchResult> = searchResults ?? notes;
   const isSearching = searchResults !== null;
+
+  // Reset focus index when selection is cleared or results change
+  useEffect(() => {
+    if (selectedId === null) {
+      setFocusIndex(null);
+    }
+  }, [selectedId, searchResults]);
 
   const scrollIntoView = useCallback((index: number) => {
     const el = itemRefs.current.get(index);

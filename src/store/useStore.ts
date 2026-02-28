@@ -16,6 +16,7 @@ interface AppState {
   searchLoading: boolean;
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
+  deselectNote: () => void;
   updateEtag: (etag: string) => void;
   createNote: (title?: string) => Promise<void>;
   deleteNote: (id: string) => Promise<boolean>;
@@ -58,6 +59,8 @@ export const useStore = create<AppState>((set, get) => ({
       set({ selectedId: null });
     }
   },
+
+  deselectNote: () => set({ selectedId: null, selectedNote: null }),
 
   updateEtag: (etag: string) =>
     set((s) => ({
@@ -102,7 +105,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   search: async (query: string) => {
-    set({ searchQuery: query, searchLoading: true });
+    set({ searchQuery: query, searchLoading: true, selectedId: null, selectedNote: null });
     try {
       const res = await apiFetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {

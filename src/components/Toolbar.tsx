@@ -9,6 +9,7 @@ export default function Toolbar() {
   const clearSearch = useStore((s) => s.clearSearch);
   const searchQuery = useStore((s) => s.searchQuery);
   const createNote = useStore((s) => s.createNote);
+  const deselectNote = useStore((s) => s.deselectNote);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -68,6 +69,7 @@ export default function Toolbar() {
       // Escape to focus search — but not if already in the search input
       if (e.key === 'Escape' && document.activeElement !== inputRef.current) {
         e.preventDefault();
+        deselectNote();
         inputRef.current?.focus();
         inputRef.current?.select();
       }
@@ -75,7 +77,7 @@ export default function Toolbar() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [createNote]);
+  }, [createNote, deselectNote]);
 
   const searchResults = useStore((s) => s.searchResults);
 
