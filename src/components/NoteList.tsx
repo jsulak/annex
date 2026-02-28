@@ -17,12 +17,21 @@ export default function NoteList() {
   const displayNotes: Array<NoteIndex | SearchResult> = searchResults ?? notes;
   const isSearching = searchResults !== null;
 
-  // Reset focus index when selection is cleared or results change
+  // Sync focusIndex when selectedId changes (e.g. wiki-link navigation)
   useEffect(() => {
     if (selectedId === null) {
       setFocusIndex(null);
+      return;
     }
-  }, [selectedId, searchResults]);
+    const idx = displayNotes.findIndex((n) => n.id === selectedId);
+    if (idx >= 0) {
+      setFocusIndex(idx);
+      const el = itemRefs.current.get(idx);
+      if (el) {
+        el.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedId, displayNotes]);
 
   const scrollIntoView = useCallback((index: number) => {
     const el = itemRefs.current.get(index);
