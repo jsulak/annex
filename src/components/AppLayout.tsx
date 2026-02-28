@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore.js';
+import { useSSE } from '../hooks/useSSE.js';
 import Toolbar from './Toolbar.js';
 import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
@@ -23,6 +24,7 @@ function getSavedWidth(): number {
 export default function AppLayout() {
   const fetchNotes = useStore((s) => s.fetchNotes);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
+  useSSE();
   const dragging = useRef(false);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import path from 'node:path';
 import {
   listNoteFiles,
   readNoteFile,
@@ -10,6 +11,7 @@ import {
 } from '../lib/fileStore.js';
 import { parseNote, extractTitle, NoteIndex, NoteDetail } from '../lib/noteParser.js';
 import { addToIndex, removeFromIndex } from '../lib/searchIndex.js';
+import { suppressPath } from '../lib/watcher.js';
 
 function mtimeToEtag(mtimeMs: number): string {
   return Math.round(mtimeMs).toString(16);
@@ -92,6 +94,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
       }
     }
 
+    suppressPath(path.join(notesDir, filename));
     await writeNoteFile(notesDir, filename, noteBody);
 
     // Auto-rename file based on first-line title
@@ -100,6 +103,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     const expectedFilename = `${id} ${sanitized}.md`;
     if (expectedFilename !== filename) {
       try {
+        suppressPath(path.join(notesDir, expectedFilename));
         await renameNoteFile(notesDir, filename, expectedFilename);
         filename = expectedFilename;
       } catch {
@@ -129,6 +133,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
       return reply.status(404).send({ error: 'Note not found' });
     }
 
+    suppressPath(path.join(notesDir, filename));
     await deleteNoteFile(notesDir, filename);
     removeFromIndex(id);
     return { ok: true, filename };
@@ -155,6 +160,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     }
 
     const targetFilename = newFilename.endsWith('.md') ? newFilename : newFilename + '.md';
+    suppressPath(path.join(notesDir, targetFilename));
     await renameNoteFile(notesDir, oldFilename, targetFilename);
 
     const [body, { mtime, mtimeMs }] = await Promise.all([
