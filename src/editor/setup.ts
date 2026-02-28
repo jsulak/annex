@@ -5,9 +5,10 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { zettelTheme } from './theme.js';
+import { zettelTheme, zettelHighlight } from './theme.js';
 import { wikiLinks } from './wikilinks.js';
 import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
+import { listIndent } from './listIndent.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
@@ -19,11 +20,13 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
   return [
     markdown({ codeLanguages: languages }),
     zettelTheme,
+    zettelHighlight,
     EditorView.lineWrapping,
     history(),
     closeBrackets(),
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
     placeholder('Start writing...'),
+    listIndent,
     wikiLinks(callbacks.onNavigate),
     zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
