@@ -82,6 +82,15 @@ export default function Toolbar() {
   // Escape to clear and blur; Enter on empty results to create note
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const noteList = document.getElementById('note-list');
+        if (noteList) {
+          noteList.focus();
+        }
+        return;
+      }
+
       if (e.key === 'Escape') {
         if (inputRef.current) {
           inputRef.current.value = '';
@@ -112,6 +121,7 @@ export default function Toolbar() {
       }}
     >
       <input
+        id="search-input"
         ref={inputRef}
         type="text"
         placeholder="Search... (Esc / Cmd+L)"
