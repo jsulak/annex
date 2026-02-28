@@ -1,6 +1,10 @@
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { tags, Tag } from '@lezer/highlight';
+
+/** Custom tags for list/quote marks so they can be styled separately from other processingInstruction marks. */
+export const listMarkTag = Tag.define();
+export const quoteMarkTag = Tag.define();
 
 const highlightStyle = HighlightStyle.define([
   { tag: tags.heading1, fontWeight: '700', fontSize: '1.4em' },
@@ -15,6 +19,8 @@ const highlightStyle = HighlightStyle.define([
   { tag: tags.monospace, class: 'cmt-monospace' },
   { tag: tags.quote, class: 'cmt-quote' },
   { tag: [tags.processingInstruction, tags.contentSeparator], class: 'cmt-meta' },
+  { tag: listMarkTag, color: 'var(--text-secondary)' },
+  { tag: quoteMarkTag, color: 'var(--text-secondary)' },
   { tag: tags.labelName, class: 'cmt-link' }, // reference-style link labels
 ]);
 
@@ -84,5 +90,6 @@ export const zettelTheme = EditorView.theme({
   },
   '.cmt-meta': {
     color: 'var(--text-secondary)',
+    opacity: '0.45',
   },
 });
