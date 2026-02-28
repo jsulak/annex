@@ -33,11 +33,11 @@ function wikiLinkCompletion(providers: CompletionProviders) {
       )
       .slice(0, 30)
       .map((n) => {
-        const text = n.title || n.id;
+        const linkTarget = n.id || n.title;
         return {
-          label: text,
+          label: n.title || n.id,
           detail: n.id,
-          apply: `${text}]]`,
+          apply: `${linkTarget}]]`,
         };
       });
 
