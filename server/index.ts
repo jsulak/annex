@@ -10,6 +10,7 @@ import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
 import { registerTags } from './routes/tags.js';
 import { registerEvents } from './routes/events.js';
+import { registerConfig } from './routes/config.js';
 import { buildIndex } from './lib/searchIndex.js';
 import { startWatcher } from './lib/watcher.js';
 
@@ -80,6 +81,9 @@ async function start() {
 
   // SSE events endpoint
   await registerEvents(app);
+
+  // Config API
+  await registerConfig(app);
 
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);

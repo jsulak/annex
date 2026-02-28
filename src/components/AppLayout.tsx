@@ -7,6 +7,7 @@ import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
 import QuickOpen from './QuickOpen.js';
 import TagsModal from './TagsModal.js';
+import SettingsPanel from './SettingsPanel.js';
 
 const STORAGE_KEY = 'zettelweb-panel-width';
 const DEFAULT_WIDTH = 280;
@@ -26,8 +27,10 @@ function getSavedWidth(): number {
 
 export default function AppLayout() {
   const fetchNotes = useStore((s) => s.fetchNotes);
+  const fetchSettings = useStore((s) => s.fetchSettings);
   const quickOpenVisible = useStore((s) => s.quickOpenVisible);
   const tagsModalVisible = useStore((s) => s.tagsModalVisible);
+  const settingsVisible = useStore((s) => s.settingsVisible);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
   useNoteNavigation();
@@ -35,7 +38,8 @@ export default function AppLayout() {
 
   useEffect(() => {
     fetchNotes();
-  }, [fetchNotes]);
+    fetchSettings();
+  }, [fetchNotes, fetchSettings]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(panelWidth));
@@ -112,6 +116,7 @@ export default function AppLayout() {
       </div>
       {quickOpenVisible && <QuickOpen />}
       {tagsModalVisible && <TagsModal />}
+      {settingsVisible && <SettingsPanel />}
     </div>
   );
 }

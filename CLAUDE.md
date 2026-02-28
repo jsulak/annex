@@ -55,7 +55,7 @@ npm run setup
 - [x] Navigation (back/forward, Quick Open)
 - [x] Conflict detection (etag, If-Match, 409 handling)
 - [x] Tags modal + Backlinks panel
-- [ ] Settings panel (all options via PUT /config)
+- [x] Settings panel (all options via PUT /config)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [ ] Deploy tooling (deploy.sh, ecosystem.config.js, Caddyfile.example)
