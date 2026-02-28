@@ -40,3 +40,100 @@ body {
   background: var(--bg-app);
   color: var(--text-primary);
 }
+
+/* Preview pane styles */
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+  font-weight: 600;
+}
+
+.preview-content h1 { font-size: 1.4em; }
+.preview-content h2 { font-size: 1.2em; }
+.preview-content h3 { font-size: 1.1em; }
+
+.preview-content p {
+  margin-bottom: 0.8em;
+}
+
+.preview-content ul,
+.preview-content ol {
+  margin-bottom: 0.8em;
+  padding-left: 1.6em;
+}
+
+.preview-content li {
+  margin-bottom: 0.2em;
+}
+
+.preview-content blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  margin-bottom: 0.8em;
+  color: var(--text-secondary);
+}
+
+.preview-content code {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.95em;
+}
+
+.preview-content pre {
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  padding: 12px;
+  border-radius: 3px;
+  margin-bottom: 0.8em;
+  overflow-x: auto;
+}
+
+.preview-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.preview-content a {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.preview-content a.preview-wikilink {
+  text-decoration-style: dotted;
+  cursor: pointer;
+}
+
+.preview-content a.preview-tag {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.preview-content table {
+  border-collapse: collapse;
+  margin-bottom: 0.8em;
+}
+
+.preview-content th,
+.preview-content td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+
+.preview-content th {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+.preview-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+.preview-content img {
+  max-width: 100%;
+}

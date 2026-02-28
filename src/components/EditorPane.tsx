@@ -1,9 +1,12 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useAutoSave } from '../hooks/useAutoSave.js';
 import type { SaveStatus } from '../hooks/useAutoSave.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 import CodeMirrorEditor from './CodeMirrorEditor.js';
+import Preview from './Preview.js';
+
+type ViewMode = 'edit' | 'preview' | 'split';
 
 function SaveIndicator({ status }: { status: SaveStatus }) {
   if (status === 'idle') return null;
@@ -30,16 +33,87 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
   }
 }
 
+function ViewModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ViewMode;
+  onChange: (mode: ViewMode) => void;
+}) {
+  const modes: ViewMode[] = ['edit', 'preview', 'split'];
+  const labels: Record<ViewMode, string> = {
+    edit: 'Edit',
+    preview: 'Preview',
+    split: 'Split',
+  };
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: '1px',
+        position: 'absolute',
+        top: 6,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        background: 'var(--border)',
+        borderRadius: '3px',
+        overflow: 'hidden',
+      }}
+    >
+      {modes.map((m) => (
+        <button
+          key={m}
+          onClick={() => onChange(m)}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            padding: '2px 8px',
+            border: 'none',
+            background: m === mode ? 'var(--bg-selected)' : 'var(--bg-app)',
+            color: m === mode ? 'var(--text-primary)' : 'var(--text-secondary)',
+            cursor: 'pointer',
+          }}
+        >
+          {labels[m]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
   const selectedId = useStore((s) => s.selectedId);
   const deleteNote = useStore((s) => s.deleteNote);
   const notes = useStore((s) => s.notes);
   const selectNote = useStore((s) => s.selectNote);
-  const { handleChange, saveNow, saveStatus } = useAutoSave(
+  const searchFn = useStore((s) => s.search);
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
+  // Track live content for preview in split mode
+  const [liveContent, setLiveContent] = useState<string>('');
+
+  const { handleChange: autoSaveChange, saveNow, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
   );
+
+  // Wrap handleChange to also update liveContent for split preview
+  const handleChange = useCallback(
+    (content: string) => {
+      setLiveContent(content);
+      autoSaveChange(content);
+    },
+    [autoSaveChange],
+  );
+
+  // Sync liveContent when note loads
+  useEffect(() => {
+    if (selectedNote) {
+      setLiveContent(selectedNote.body);
+    }
+  }, [selectedNote]);
 
   // Navigate to a wiki-linked note by title or ID
   const handleNavigate = useCallback(
@@ -58,6 +132,14 @@ export default function EditorPane() {
     [notes, selectNote],
   );
 
+  // Search by tag from preview
+  const handleSearchTag = useCallback(
+    (tag: string) => {
+      searchFn(`#${tag}`);
+    },
+    [searchFn],
+  );
+
   // Completion providers for [[ and # autocomplete
   const completionProviders: CompletionProviders = useMemo(
     () => ({
@@ -74,7 +156,7 @@ export default function EditorPane() {
     [],
   );
 
-  // Cmd+Backspace (Mac) or Ctrl+Delete (Windows) to delete note
+  // Cmd+Backspace (Mac) or Ctrl+Delete to delete; Cmd+P to cycle view mode
   const handleDelete = useCallback(async () => {
     if (!selectedId || !selectedNote) return;
     const title = selectedNote.title || selectedNote.filename;
@@ -89,6 +171,17 @@ export default function EditorPane() {
       if (isMacDelete || isCtrlDelete) {
         e.preventDefault();
         handleDelete();
+        return;
+      }
+
+      // Cmd+P / Ctrl+P — cycle view mode
+      if (e.key === 'p' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        setViewMode((prev) => {
+          if (prev === 'edit') return 'preview';
+          if (prev === 'preview') return 'split';
+          return 'edit';
+        });
       }
     };
 
@@ -132,6 +225,8 @@ export default function EditorPane() {
     );
   }
 
+  const previewBody = viewMode === 'preview' ? selectedNote.body : liveContent;
+
   return (
     <div
       style={{
@@ -142,14 +237,41 @@ export default function EditorPane() {
         position: 'relative',
       }}
     >
-      <SaveIndicator status={saveStatus} />
-      <CodeMirrorEditor
-        doc={selectedNote.body}
-        onUpdate={handleChange}
-        saveNow={saveNow}
-        onNavigate={handleNavigate}
-        completionProviders={completionProviders}
-      />
+      <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+      {viewMode !== 'preview' && <SaveIndicator status={saveStatus} />}
+
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, paddingTop: 28 }}>
+        {/* Editor pane */}
+        {(viewMode === 'edit' || viewMode === 'split') && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              minWidth: 0,
+              borderRight: viewMode === 'split' ? '1px solid var(--border)' : undefined,
+            }}
+          >
+            <CodeMirrorEditor
+              doc={selectedNote.body}
+              onUpdate={handleChange}
+              saveNow={saveNow}
+              onNavigate={handleNavigate}
+              completionProviders={completionProviders}
+            />
+          </div>
+        )}
+
+        {/* Preview pane */}
+        {(viewMode === 'preview' || viewMode === 'split') && (
+          <div style={{ flex: 1, display: 'flex', minWidth: 0, overflow: 'auto' }}>
+            <Preview
+              body={previewBody}
+              onNavigate={handleNavigate}
+              onSearchTag={handleSearchTag}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
