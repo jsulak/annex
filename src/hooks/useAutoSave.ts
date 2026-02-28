@@ -13,6 +13,7 @@ export function useAutoSave(
 ): {
   handleChange: (content: string) => void;
   saveNow: () => Promise<void>;
+  cancelPending: () => void;
   saveStatus: SaveStatus;
 } {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -43,6 +44,14 @@ export function useAutoSave(
 
   const doSave = useCallback(async (id: string, content: string, currentEtag: string | null) => {
     if (isSavingRef.current) return;
+
+    // Don't save notes that are being deleted or already deleted
+    const state = useStore.getState();
+    if (state.pendingDeleteId === id || !state.notes.some((n) => n.id === id)) {
+      pendingContentRef.current = null;
+      return;
+    }
+
     isSavingRef.current = true;
     setSaveStatus('saving');
     clearSavedTimer();
@@ -156,5 +165,12 @@ export function useAutoSave(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { handleChange, saveNow, saveStatus };
+  const cancelPending = useCallback(() => {
+    clearDebounce();
+    pendingContentRef.current = null;
+    useStore.getState().setHasPendingEdits(false);
+    setSaveStatus('idle');
+  }, [clearDebounce]);
+
+  return { handleChange, saveNow, cancelPending, saveStatus };
 }

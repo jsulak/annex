@@ -13,6 +13,7 @@ import { listIndent } from './listIndent.js';
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
   onNavigate: (target: string) => void;
+  onSearchTag: (tag: string) => void;
   completionProviders: CompletionProviders;
 }
 
@@ -27,7 +28,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
     placeholder('Start writing...'),
     listIndent,
-    wikiLinks(callbacks.onNavigate),
+    wikiLinks(callbacks.onNavigate, callbacks.onSearchTag),
     zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {

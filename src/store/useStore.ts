@@ -45,6 +45,7 @@ interface AppState {
   conflict: ConflictInfo | null;
   hasPendingEdits: boolean;
   pendingBody: string | null;
+  pendingDeleteId: string | null;
   appSettings: AppSettings | null;
   fetchSettings: () => Promise<void>;
   setAppSettings: (settings: AppSettings) => void;
@@ -93,6 +94,7 @@ export const useStore = create<AppState>((set, get) => ({
   conflict: null,
   hasPendingEdits: false,
   pendingBody: null,
+  pendingDeleteId: null,
   appSettings: null,
 
   fetchSettings: async () => {
@@ -198,19 +200,29 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteNote: async (id: string) => {
-    const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    });
+    // Mark as pending delete immediately so auto-save won't recreate the file
+    set({ pendingDeleteId: id });
 
-    if (res.ok) {
-      set((s) => ({
-        notes: s.notes.filter((n) => n.id !== id),
-        selectedId: s.selectedId === id ? null : s.selectedId,
-        selectedNote: s.selectedId === id ? null : s.selectedNote,
-      }));
-      return true;
+    try {
+      const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        set((s) => ({
+          notes: s.notes.filter((n) => n.id !== id),
+          selectedId: s.selectedId === id ? null : s.selectedId,
+          selectedNote: s.selectedId === id ? null : s.selectedNote,
+          pendingDeleteId: null,
+        }));
+        return true;
+      }
+      set({ pendingDeleteId: null });
+      return false;
+    } catch {
+      set({ pendingDeleteId: null });
+      return false;
     }
-    return false;
   },
 
   upsertNoteFromSSE: async (id: string) => {

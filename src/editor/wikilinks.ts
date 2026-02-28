@@ -10,16 +10,39 @@ import type { Extension } from '@codemirror/state';
 
 const wikiLinkMark = Decoration.mark({ class: 'cm-wikilink' });
 
-const decorator = new MatchDecorator({
+const wikiLinkDecorator = new MatchDecorator({
   regexp: /\[\[([^\]]+)\]\]/g,
   decoration: () => wikiLinkMark,
 });
 
 const wikiLinkPlugin = ViewPlugin.define(
   (view) => ({
-    decorations: decorator.createDeco(view),
+    decorations: wikiLinkDecorator.createDeco(view),
     update(update: ViewUpdate) {
-      this.decorations = decorator.updateDeco(update, this.decorations);
+      this.decorations = wikiLinkDecorator.updateDeco(update, this.decorations);
+    },
+  }),
+  {
+    decorations: (v) => v.decorations,
+  },
+);
+
+const tagMark = Decoration.mark({ class: 'cm-tag' });
+
+const tagDecorator = new MatchDecorator({
+  regexp: /(?:^|\s)(#[a-zA-Z][\w-]*)/g,
+  decorate: (add, from, _to, match) => {
+    // Only decorate the captured #tag group, not the leading whitespace
+    const offset = match[0].length - match[1].length;
+    add(from + offset, from + offset + match[1].length, tagMark);
+  },
+});
+
+const tagPlugin = ViewPlugin.define(
+  (view) => ({
+    decorations: tagDecorator.createDeco(view),
+    update(update: ViewUpdate) {
+      this.decorations = tagDecorator.updateDeco(update, this.decorations);
     },
   }),
   {
@@ -37,11 +60,36 @@ function wikiLinkAt(doc: string, pos: number): string | null {
   return doc.slice(before + 2, after).trim();
 }
 
+/** Extract the tag at a given position, if any. */
+function tagAt(doc: string, pos: number): string | null {
+  // Find the line containing pos
+  const lineStart = doc.lastIndexOf('\n', pos - 1) + 1;
+  const lineEnd = doc.indexOf('\n', pos);
+  const line = doc.slice(lineStart, lineEnd === -1 ? doc.length : lineEnd);
+  const posInLine = pos - lineStart;
+
+  const re = /(?:^|\s)#([a-zA-Z][\w-]*)/g;
+  let match;
+  while ((match = re.exec(line)) !== null) {
+    // The # starts after the optional whitespace
+    const hashPos = match[0].startsWith('#') ? match.index : match.index + 1;
+    const tagEnd = hashPos + 1 + match[1].length;
+    if (posInLine >= hashPos && posInLine < tagEnd) {
+      return match[1].toLowerCase();
+    }
+  }
+  return null;
+}
+
 /**
- * Create a wiki-link extension with Cmd+Click navigation.
+ * Create a wiki-link + tag extension with click navigation.
  * `onNavigate` is called with the link target (note title or ID).
+ * `onSearchTag` is called with the tag name (without #).
  */
-export function wikiLinks(onNavigate: (target: string) => void): Extension {
+export function wikiLinks(
+  onNavigate: (target: string) => void,
+  onSearchTag?: (tag: string) => void,
+): Extension {
   const clickHandler = EditorView.domEventHandlers({
     click(event: MouseEvent, view: EditorView) {
 
@@ -49,14 +97,26 @@ export function wikiLinks(onNavigate: (target: string) => void): Extension {
       if (pos === null) return false;
 
       const doc = view.state.doc.toString();
-      const target = wikiLinkAt(doc, pos);
-      if (!target) return false;
 
-      event.preventDefault();
-      onNavigate(target);
-      return true;
+      const wikiTarget = wikiLinkAt(doc, pos);
+      if (wikiTarget) {
+        event.preventDefault();
+        onNavigate(wikiTarget);
+        return true;
+      }
+
+      if (onSearchTag) {
+        const tag = tagAt(doc, pos);
+        if (tag) {
+          event.preventDefault();
+          onSearchTag(tag);
+          return true;
+        }
+      }
+
+      return false;
     },
   });
 
-  return [wikiLinkPlugin, clickHandler];
+  return [wikiLinkPlugin, tagPlugin, clickHandler];
 }

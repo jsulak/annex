@@ -58,6 +58,10 @@ export const zettelTheme = EditorView.theme({
     textDecorationStyle: 'dotted',
     cursor: 'pointer',
   },
+  '.cm-tag': {
+    color: 'var(--text-accent)',
+    cursor: 'pointer',
+  },
   '.cm-tooltip-autocomplete': {
     fontFamily: 'var(--font-mono)',
     fontSize: '12px',

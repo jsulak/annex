@@ -10,6 +10,7 @@ interface Props {
   onUpdate: (content: string) => void;
   saveNow?: () => void;
   onNavigate?: (target: string) => void;
+  onSearchTag?: (tag: string) => void;
   completionProviders?: CompletionProviders;
 }
 
@@ -18,6 +19,7 @@ export default function CodeMirrorEditor({
   onUpdate,
   saveNow,
   onNavigate,
+  onSearchTag,
   completionProviders,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +32,9 @@ export default function CodeMirrorEditor({
 
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
+
+  const onSearchTagRef = useRef(onSearchTag);
+  onSearchTagRef.current = onSearchTag;
 
   const completionProvidersRef = useRef(completionProviders);
   completionProvidersRef.current = completionProviders;
@@ -49,6 +54,11 @@ export default function CodeMirrorEditor({
     onNavigateRef.current?.(target);
   }, []);
 
+  // Stable callback that delegates to the latest onSearchTag ref
+  const stableOnSearchTag = useCallback((tag: string) => {
+    onSearchTagRef.current?.(tag);
+  }, []);
+
   // Stable completion providers that delegate to the latest ref
   const stableProviders: CompletionProviders = {
     getNotes: () => completionProvidersRef.current?.getNotes() ?? [],
@@ -58,8 +68,9 @@ export default function CodeMirrorEditor({
   const buildCallbacks = useCallback((): EditorCallbacks => ({
     onUpdate: stableOnUpdate,
     onNavigate: stableOnNavigate,
+    onSearchTag: stableOnSearchTag,
     completionProviders: stableProviders,
-  }), [stableOnUpdate, stableOnNavigate]);
+  }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag]);
 
   // Create editor view once on mount
   useEffect(() => {

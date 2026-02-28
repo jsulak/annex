@@ -16,7 +16,7 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
   const style: React.CSSProperties = {
     position: 'absolute',
     top: 8,
-    right: 12,
+    right: 70,
     fontSize: '12px',
     fontFamily: 'var(--font-mono)',
     pointerEvents: 'none',
@@ -99,7 +99,7 @@ export default function EditorPane() {
   // Track live content for preview in split mode
   const [liveContent, setLiveContent] = useState<string>('');
 
-  const { handleChange: autoSaveChange, saveNow, saveStatus } = useAutoSave(
+  const { handleChange: autoSaveChange, saveNow, cancelPending, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
   );
@@ -161,25 +161,17 @@ export default function EditorPane() {
     [],
   );
 
-  // Cmd+Backspace (Mac) or Ctrl+Delete to delete; Cmd+P to cycle view mode
   const handleDelete = useCallback(async () => {
     if (!selectedId || !selectedNote) return;
     const title = selectedNote.title || selectedNote.filename;
     if (!window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) return;
+    cancelPending();
     await deleteNote(selectedId);
-  }, [selectedId, selectedNote, deleteNote]);
+  }, [selectedId, selectedNote, deleteNote, cancelPending]);
 
+  // Cmd+P / Ctrl+P — cycle view mode
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const isMacDelete = e.metaKey && e.key === 'Backspace';
-      const isCtrlDelete = e.ctrlKey && e.key === 'Delete';
-      if (isMacDelete || isCtrlDelete) {
-        e.preventDefault();
-        handleDelete();
-        return;
-      }
-
-      // Cmd+P / Ctrl+P — cycle view mode
       if (e.key === 'p' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
         e.preventDefault();
         setViewMode((prev) => {
@@ -192,7 +184,7 @@ export default function EditorPane() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [handleDelete]);
+  }, []);
 
   if (!selectedId) {
     return (
@@ -244,6 +236,26 @@ export default function EditorPane() {
     >
       <ViewModeToggle mode={viewMode} onChange={setViewMode} />
       {viewMode !== 'preview' && <SaveIndicator status={saveStatus} />}
+      <button
+        title="Delete note"
+        onClick={handleDelete}
+        style={{
+          position: 'absolute',
+          top: 6,
+          right: 12,
+          zIndex: 10,
+          fontFamily: 'var(--font-mono)',
+          fontSize: '12px',
+          padding: '2px 8px',
+          border: '1px solid var(--border)',
+          borderRadius: '2px',
+          background: 'var(--bg-app)',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+        }}
+      >
+        Delete
+      </button>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, paddingTop: 28 }}>
         {/* Editor pane */}
@@ -261,6 +273,7 @@ export default function EditorPane() {
               onUpdate={handleChange}
               saveNow={saveNow}
               onNavigate={handleNavigate}
+              onSearchTag={handleSearchTag}
               completionProviders={completionProviders}
             />
           </div>
