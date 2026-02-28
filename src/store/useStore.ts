@@ -3,7 +3,7 @@ import { apiFetch } from '../api/client.js';
 import type { NoteIndex, NoteDetail, SearchResult } from '../types.js';
 
 function generateId(): string {
-  return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+  return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 12);
 }
 
 interface ConflictInfo {
