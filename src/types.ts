@@ -13,3 +13,8 @@ export interface NoteDetail extends NoteIndex {
   body: string;
   etag: string;
 }
+
+export interface SearchResult extends NoteIndex {
+  titleMatches: Array<[number, number]>;    // [offset, length]
+  snippetMatches: Array<[number, number]>;  // [offset, length]
+}
