@@ -32,4 +32,14 @@ export const zettelTheme = EditorView.theme({
   '.cm-activeLineGutter': {
     display: 'none',
   },
+  '.cm-wikilink': {
+    color: 'var(--text-accent)',
+    textDecoration: 'underline',
+    textDecorationStyle: 'dotted',
+    cursor: 'pointer',
+  },
+  '.cm-tooltip-autocomplete': {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '12px',
+  },
 });

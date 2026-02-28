@@ -6,10 +6,16 @@ import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
 import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { zettelTheme } from './theme.js';
+import { wikiLinks } from './wikilinks.js';
+import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
 
-export function createExtensions(
-  onUpdate: (content: string) => void,
-): Extension[] {
+export interface EditorCallbacks {
+  onUpdate: (content: string) => void;
+  onNavigate: (target: string) => void;
+  completionProviders: CompletionProviders;
+}
+
+export function createExtensions(callbacks: EditorCallbacks): Extension[] {
   return [
     markdown({ codeLanguages: languages }),
     zettelTheme,
@@ -18,9 +24,11 @@ export function createExtensions(
     closeBrackets(),
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap]),
     placeholder('Start writing...'),
+    wikiLinks(callbacks.onNavigate),
+    zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
-        onUpdate(update.state.doc.toString());
+        callbacks.onUpdate(update.state.doc.toString());
       }
     }),
   ];
