@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useAutoSave } from '../hooks/useAutoSave.js';
 import type { SaveStatus } from '../hooks/useAutoSave.js';
@@ -31,10 +32,34 @@ function SaveIndicator({ status }: { status: SaveStatus }) {
 export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
   const selectedId = useStore((s) => s.selectedId);
+  const deleteNote = useStore((s) => s.deleteNote);
   const { handleChange, saveNow, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
   );
+
+  // Cmd+Backspace (Mac) or Ctrl+Delete (Windows) to delete note
+  const handleDelete = useCallback(async () => {
+    if (!selectedId || !selectedNote) return;
+    const title = selectedNote.title || selectedNote.filename;
+    if (!window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) return;
+    await deleteNote(selectedId);
+  }, [selectedId, selectedNote, deleteNote]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Cmd+Backspace (Mac) or Ctrl+Delete (Windows/Linux)
+      const isMacDelete = e.metaKey && e.key === 'Backspace';
+      const isCtrlDelete = e.ctrlKey && e.key === 'Delete';
+      if (isMacDelete || isCtrlDelete) {
+        e.preventDefault();
+        handleDelete();
+      }
+    };
+
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [handleDelete]);
 
   if (!selectedId) {
     return (

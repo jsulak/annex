@@ -8,7 +8,8 @@ import {
   statNoteFile,
   findFileById,
 } from '../lib/fileStore.js';
-import { parseNote, NoteIndex, NoteDetail } from '../lib/noteParser.js';
+import { parseNote, extractTitle, NoteIndex, NoteDetail } from '../lib/noteParser.js';
+import { addToIndex, removeFromIndex } from '../lib/searchIndex.js';
 
 function mtimeToEtag(mtimeMs: number): string {
   return Math.round(mtimeMs).toString(16);
@@ -93,12 +94,29 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
 
     await writeNoteFile(notesDir, filename, noteBody);
 
+    // Auto-rename file based on first-line title
+    const title = extractTitle(noteBody, filename);
+    const sanitized = title.replace(/[/\\:*?"<>|]/g, '').trim() || 'Untitled';
+    const expectedFilename = `${id} ${sanitized}.md`;
+    if (expectedFilename !== filename) {
+      try {
+        await renameNoteFile(notesDir, filename, expectedFilename);
+        filename = expectedFilename;
+      } catch {
+        // Keep current filename if rename fails (e.g. collision)
+      }
+    }
+
     const { mtime, mtimeMs } = await statNoteFile(notesDir, filename);
     const etag = mtimeToEtag(mtimeMs);
     reply.header('etag', etag);
 
     const note = parseNote(filename, noteBody, mtime);
     const detail: NoteDetail = { ...note, body: noteBody, etag };
+
+    // Update search index
+    addToIndex({ ...note, body: noteBody });
+
     return detail;
   });
 
@@ -112,6 +130,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     }
 
     await deleteNoteFile(notesDir, filename);
+    removeFromIndex(id);
     return { ok: true, filename };
   });
 

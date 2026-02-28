@@ -8,6 +8,7 @@ export default function Toolbar() {
   const search = useStore((s) => s.search);
   const clearSearch = useStore((s) => s.clearSearch);
   const searchQuery = useStore((s) => s.searchQuery);
+  const createNote = useStore((s) => s.createNote);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -29,9 +30,16 @@ export default function Toolbar() {
     [search, clearSearch],
   );
 
-  // Cmd+L and / to focus the omnibar
+  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Cmd+N or Ctrl+N — new note
+      if (e.key === 'n' && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        createNote();
+        return;
+      }
+
       // Cmd+L or Ctrl+L
       if (e.key === 'l' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -67,9 +75,11 @@ export default function Toolbar() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [createNote]);
 
-  // Escape to clear and blur
+  const searchResults = useStore((s) => s.searchResults);
+
+  // Escape to clear and blur; Enter on empty results to create note
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Escape') {
@@ -78,9 +88,16 @@ export default function Toolbar() {
         }
         clearSearch();
         inputRef.current?.blur();
+      } else if (e.key === 'Enter' && searchResults && searchResults.length === 0) {
+        const query = inputRef.current?.value.trim();
+        if (query) {
+          if (inputRef.current) inputRef.current.value = '';
+          clearSearch();
+          createNote(query);
+        }
       }
     },
-    [clearSearch],
+    [clearSearch, searchResults, createNote],
   );
 
   return (
@@ -114,8 +131,8 @@ export default function Toolbar() {
         }}
       />
       <button
-        title="New note"
-        disabled
+        title="New note (Cmd+N)"
+        onClick={() => createNote()}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '16px',
@@ -124,7 +141,7 @@ export default function Toolbar() {
           borderRadius: '2px',
           background: 'var(--bg-app)',
           color: 'var(--text-primary)',
-          cursor: 'default',
+          cursor: 'pointer',
         }}
       >
         +

@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { apiFetch } from '../api/client.js';
 import type { NoteIndex, NoteDetail, SearchResult } from '../types.js';
 
+function generateId(): string {
+  return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
+}
+
 interface AppState {
   notes: NoteIndex[];
   selectedId: string | null;
@@ -13,12 +17,14 @@ interface AppState {
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   updateEtag: (etag: string) => void;
+  createNote: (title?: string) => Promise<void>;
+  deleteNote: (id: string) => Promise<boolean>;
   search: (query: string) => Promise<void>;
   clearSearch: () => void;
   logout: () => Promise<void>;
 }
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   notes: [],
   selectedId: null,
   selectedNote: null,
@@ -58,6 +64,43 @@ export const useStore = create<AppState>((set) => ({
       selectedNote: s.selectedNote ? { ...s.selectedNote, etag } : null,
     })),
 
+  createNote: async (title?: string) => {
+    const id = generateId();
+    const body = title ? `# ${title}\n\n` : '';
+    const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ body }),
+    });
+
+    if (res.ok) {
+      const note: NoteDetail = await res.json();
+      const { body: _, etag: __, ...noteIndex } = note;
+      set((s) => ({
+        notes: [noteIndex as NoteIndex, ...s.notes],
+        selectedId: note.id,
+        selectedNote: note,
+        searchQuery: '',
+        searchResults: null,
+      }));
+    }
+  },
+
+  deleteNote: async (id: string) => {
+    const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+
+    if (res.ok) {
+      set((s) => ({
+        notes: s.notes.filter((n) => n.id !== id),
+        selectedId: s.selectedId === id ? null : s.selectedId,
+        selectedNote: s.selectedId === id ? null : s.selectedNote,
+      }));
+      return true;
+    }
+    return false;
+  },
+
   search: async (query: string) => {
     set({ searchQuery: query, searchLoading: true });
     try {
@@ -67,7 +110,6 @@ export const useStore = create<AppState>((set) => ({
         set({ searchResults: results });
       }
     } catch {
-      // On error, clear results
       set({ searchResults: null });
     } finally {
       set({ searchLoading: false });
