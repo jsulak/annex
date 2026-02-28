@@ -6,6 +6,20 @@ function generateId(): string {
   return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 12);
 }
 
+export interface AppSettings {
+  autoSaveDelay: number;
+  showSnippets: boolean;
+  editorWidth: number;
+  fontSize: number;
+  noteTemplate: string;
+  indexExtensions: string[];
+  darkMode: 'auto' | 'light' | 'dark';
+}
+
+function applySettingsToDOM(settings: AppSettings) {
+  document.documentElement.style.setProperty('--font-size-editor', `${settings.fontSize}px`);
+}
+
 interface ConflictInfo {
   noteId: string;
   localBody: string;
@@ -26,10 +40,14 @@ interface AppState {
   quickOpenVisible: boolean;
   tagsModalVisible: boolean;
   backlinksVisible: boolean;
+  settingsVisible: boolean;
   _navigatingHistory: boolean;
   conflict: ConflictInfo | null;
   hasPendingEdits: boolean;
   pendingBody: string | null;
+  appSettings: AppSettings | null;
+  fetchSettings: () => Promise<void>;
+  setAppSettings: (settings: AppSettings) => void;
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
   deselectNote: () => void;
@@ -54,6 +72,7 @@ interface AppState {
   setTagsModalVisible: (visible: boolean) => void;
   setBacklinksVisible: (visible: boolean) => void;
   toggleBacklinks: () => void;
+  setSettingsVisible: (visible: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -69,10 +88,30 @@ export const useStore = create<AppState>((set, get) => ({
   quickOpenVisible: false,
   tagsModalVisible: false,
   backlinksVisible: false,
+  settingsVisible: false,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
   pendingBody: null,
+  appSettings: null,
+
+  fetchSettings: async () => {
+    try {
+      const res = await apiFetch('/api/v1/config');
+      if (res.ok) {
+        const data = await res.json();
+        set({ appSettings: data.settings });
+        applySettingsToDOM(data.settings);
+      }
+    } catch {
+      // Use defaults if fetch fails
+    }
+  },
+
+  setAppSettings: (settings: AppSettings) => {
+    set({ appSettings: settings });
+    applySettingsToDOM(settings);
+  },
 
   fetchNotes: async () => {
     set({ loading: true });
@@ -326,4 +365,5 @@ export const useStore = create<AppState>((set, get) => ({
   setTagsModalVisible: (visible: boolean) => set({ tagsModalVisible: visible }),
   setBacklinksVisible: (visible: boolean) => set({ backlinksVisible: visible }),
   toggleBacklinks: () => set((s) => ({ backlinksVisible: !s.backlinksVisible })),
+  setSettingsVisible: (visible: boolean) => set({ settingsVisible: visible }),
 }));

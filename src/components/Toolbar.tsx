@@ -14,6 +14,7 @@ export default function Toolbar() {
   const goForward = useStore((s) => s.goForward);
   const canGoBack = useStore((s) => s.canGoBack());
   const canGoForward = useStore((s) => s.canGoForward());
+  const setSettingsVisible = useStore((s) => s.setSettingsVisible);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -192,8 +193,8 @@ export default function Toolbar() {
         +
       </button>
       <button
-        title="Settings"
-        disabled
+        title="Settings (Cmd+,)"
+        onClick={() => setSettingsVisible(true)}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '14px',
@@ -202,7 +203,7 @@ export default function Toolbar() {
           borderRadius: '2px',
           background: 'var(--bg-app)',
           color: 'var(--text-primary)',
-          cursor: 'default',
+          cursor: 'pointer',
         }}
       >
         &#x2699;

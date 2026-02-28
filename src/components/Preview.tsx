@@ -98,7 +98,7 @@ export default function Preview({ body, onNavigate, onSearchTag }: Props) {
         maxWidth: '680px',
         margin: '0 auto',
         fontFamily: 'var(--font-mono)',
-        fontSize: '13px',
+        fontSize: 'var(--font-size-editor, 13px)',
         lineHeight: '1.6',
         color: 'var(--text-primary)',
       }}

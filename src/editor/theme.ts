@@ -25,7 +25,7 @@ export const zettelTheme = EditorView.theme({
     height: '100%',
     backgroundColor: 'var(--bg-editor)',
     fontFamily: 'var(--font-mono)',
-    fontSize: '13px',
+    fontSize: 'var(--font-size-editor, 13px)',
     lineHeight: '1.6',
   },
   '.cm-content': {

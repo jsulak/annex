@@ -7,6 +7,7 @@ export function useNoteNavigation() {
   const setQuickOpenVisible = useStore((s) => s.setQuickOpenVisible);
   const setTagsModalVisible = useStore((s) => s.setTagsModalVisible);
   const toggleBacklinks = useStore((s) => s.toggleBacklinks);
+  const setSettingsVisible = useStore((s) => s.setSettingsVisible);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -47,9 +48,16 @@ export function useNoteNavigation() {
         toggleBacklinks();
         return;
       }
+
+      // Cmd+, — settings
+      if (e.key === ',') {
+        e.preventDefault();
+        setSettingsVisible(true);
+        return;
+      }
     };
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks]);
+  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible]);
 }
