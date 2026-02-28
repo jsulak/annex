@@ -48,7 +48,7 @@ npm run setup
 - [x] Note list + editor (fetch list, CodeMirror on click)
 - [x] Save (auto-save debounced + Cmd+S)
 - [x] Search (Flexsearch index, /search endpoint, omnibar highlighting)
-- [ ] New / delete notes (ID gen, trash deletion, filename-from-first-line)
+- [x] New / delete notes (ID gen, trash deletion, filename-from-first-line)
 - [ ] Wiki-links + tags (parser, editor autocomplete, clickable in preview)
 - [ ] Preview mode (marked + DOMPurify, Edit/Preview/Split toggle)
 - [ ] SSE file watcher (chokidar, /events endpoint, useSSE hook)
