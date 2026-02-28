@@ -2,78 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '../store/useStore.js';
 import type { NoteIndex, SearchResult } from '../types.js';
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-/** Render text with highlighted ranges. Ranges are [offset, length]. */
-function HighlightedText({
-  text,
-  matches,
-}: {
-  text: string;
-  matches: Array<[number, number]>;
-}) {
-  if (matches.length === 0) {
-    return <>{text}</>;
-  }
-
-  // Sort by offset, merge overlapping
-  const sorted = [...matches].sort((a, b) => a[0] - b[0]);
-  const merged: Array<[number, number]> = [];
-  for (const [off, len] of sorted) {
-    const last = merged[merged.length - 1];
-    if (last && off <= last[0] + last[1]) {
-      // Overlapping or adjacent — extend
-      const end = Math.max(last[0] + last[1], off + len);
-      last[1] = end - last[0];
-    } else {
-      merged.push([off, len]);
-    }
-  }
-
-  const parts: React.ReactNode[] = [];
-  let cursor = 0;
-
-  for (const [off, len] of merged) {
-    // Clamp to text bounds
-    const start = Math.max(0, off);
-    const end = Math.min(text.length, off + len);
-    if (start >= text.length || end <= 0) continue;
-
-    if (cursor < start) {
-      parts.push(text.slice(cursor, start));
-    }
-    parts.push(
-      <mark
-        key={start}
-        style={{
-          background: 'var(--text-accent)',
-          color: 'var(--bg-app)',
-          borderRadius: '1px',
-          padding: '0 1px',
-        }}
-      >
-        {text.slice(start, end)}
-      </mark>,
-    );
-    cursor = end;
-  }
-
-  if (cursor < text.length) {
-    parts.push(text.slice(cursor));
-  }
-
-  return <>{parts}</>;
-}
-
-function isSearchResult(note: NoteIndex | SearchResult): note is SearchResult {
-  return 'titleMatches' in note;
-}
-
 export default function NoteList() {
   const notes = useStore((s) => s.notes);
   const searchResults = useStore((s) => s.searchResults);
@@ -197,68 +125,18 @@ export default function NoteList() {
             outlineOffset: '-1px',
           }}
         >
-          <div
+          <span
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'baseline',
-              gap: '8px',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13px',
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              {isSearchResult(note) ? (
-                <HighlightedText
-                  text={note.title || note.filename}
-                  matches={note.titleMatches}
-                />
-              ) : (
-                note.title || note.filename
-              )}
-            </span>
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                flexShrink: 0,
-              }}
-            >
-              {formatDate(note.modifiedAt)}
-            </span>
-          </div>
-          {isSearching && (
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                color: 'var(--text-secondary)',
-                marginTop: '2px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {isSearchResult(note) ? (
-                <HighlightedText
-                  text={note.snippet}
-                  matches={note.snippetMatches}
-                />
-              ) : (
-                note.snippet
-              )}
-            </div>
-          )}
+            {note.filename.replace(/\.md$/i, '')}
+          </span>
         </div>
       ))}
     </div>
