@@ -59,6 +59,7 @@ npm run setup
 - [x] Delete button in editor pane + fixed deletion (apiFetch Content-Type fix)
 - [x] Wiki-link autocomplete inserts note ID instead of title
 - [x] Faded markdown formatting marks (##, *, _) with darker list/quote marks
+- [x] Link decorations (inline links collapse with clickable text + expand icon, bare URLs clickable, hover tooltip)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [ ] Deploy tooling (deploy.sh, ecosystem.config.js, Caddyfile.example)
