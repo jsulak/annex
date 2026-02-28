@@ -9,6 +9,7 @@ interface AppState {
   loading: boolean;
   fetchNotes: () => Promise<void>;
   selectNote: (id: string) => Promise<void>;
+  updateEtag: (etag: string) => void;
   logout: () => Promise<void>;
 }
 
@@ -43,6 +44,11 @@ export const useStore = create<AppState>((set) => ({
       set({ selectedId: null });
     }
   },
+
+  updateEtag: (etag: string) =>
+    set((s) => ({
+      selectedNote: s.selectedNote ? { ...s.selectedNote, etag } : null,
+    })),
 
   logout: async () => {
     await apiFetch('/api/v1/auth/logout', { method: 'POST' });
