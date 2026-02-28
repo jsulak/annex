@@ -9,7 +9,7 @@ import {
   statNoteFile,
   findFileById,
 } from '../lib/fileStore.js';
-import { parseNote, extractTitle, NoteIndex, NoteDetail } from '../lib/noteParser.js';
+import { parseNote, NoteIndex, NoteDetail } from '../lib/noteParser.js';
 import { addToIndex, removeFromIndex } from '../lib/searchIndex.js';
 import { suppressPath } from '../lib/watcher.js';
 
@@ -96,20 +96,6 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
 
     suppressPath(path.join(notesDir, filename));
     await writeNoteFile(notesDir, filename, noteBody);
-
-    // Auto-rename file based on first-line title
-    const title = extractTitle(noteBody, filename);
-    const sanitized = title.replace(/[/\\:*?"<>|]/g, '').trim() || 'Untitled';
-    const expectedFilename = `${id} ${sanitized}.md`;
-    if (expectedFilename !== filename) {
-      try {
-        suppressPath(path.join(notesDir, expectedFilename));
-        await renameNoteFile(notesDir, filename, expectedFilename);
-        filename = expectedFilename;
-      } catch {
-        // Keep current filename if rename fails (e.g. collision)
-      }
-    }
 
     const { mtime, mtimeMs } = await statNoteFile(notesDir, filename);
     const etag = mtimeToEtag(mtimeMs);
