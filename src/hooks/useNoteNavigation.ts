@@ -8,11 +8,25 @@ export function useNoteNavigation() {
   const setTagsModalVisible = useStore((s) => s.setTagsModalVisible);
   const toggleBacklinks = useStore((s) => s.toggleBacklinks);
   const setSettingsVisible = useStore((s) => s.setSettingsVisible);
+  const selectedId = useStore((s) => s.selectedId);
+  const selectedNote = useStore((s) => s.selectedNote);
+  const deleteNote = useStore((s) => s.deleteNote);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
+
+      // Cmd+Backspace — delete note
+      if (e.key === 'Backspace' && !e.shiftKey) {
+        if (!selectedId || !selectedNote) return;
+        e.preventDefault();
+        const title = selectedNote.title || selectedNote.filename;
+        if (window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) {
+          deleteNote(selectedId);
+        }
+        return;
+      }
 
       // Cmd+[ — go back
       if (e.key === '[') {
@@ -59,5 +73,5 @@ export function useNoteNavigation() {
 
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible]);
+  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, selectedId, selectedNote, deleteNote]);
 }
