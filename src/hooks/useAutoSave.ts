@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from '../api/client.js';
 import { useStore } from '../store/useStore.js';
 
-export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 
 const AUTO_SAVE_DELAY = 1000;
 const SAVED_DISPLAY_DURATION = 1500;
@@ -62,12 +62,31 @@ export function useAutoSave(
       if (res.ok) {
         const data = await res.json();
         useStore.getState().updateEtag(data.etag);
+        useStore.getState().setHasPendingEdits(false);
         pendingContentRef.current = null;
         setSaveStatus('saved');
 
         savedTimerRef.current = setTimeout(() => {
           setSaveStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_DISPLAY_DURATION);
+      } else if (res.status === 409) {
+        // Conflict — fetch current server version and surface dialog
+        try {
+          const serverRes = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
+          if (serverRes.ok) {
+            const serverNote = await serverRes.json();
+            useStore.getState().setConflict({
+              noteId: id,
+              localBody: content,
+              serverBody: serverNote.body,
+              serverEtag: serverNote.etag,
+            });
+          }
+        } catch {
+          // If we can't fetch server version, fall through to generic error
+        }
+        pendingContentRef.current = null;
+        setSaveStatus('conflict');
       } else {
         console.error('Save failed:', res.status, res.statusText);
         setSaveStatus('error');
@@ -93,6 +112,7 @@ export function useAutoSave(
 
   const handleChange = useCallback((content: string) => {
     pendingContentRef.current = content;
+    useStore.getState().setHasPendingEdits(true, content);
     setSaveStatus('dirty');
     clearSavedTimer();
     clearDebounce();
@@ -116,6 +136,7 @@ export function useAutoSave(
 
     currentNoteIdRef.current = noteId;
     pendingContentRef.current = null;
+    useStore.getState().setHasPendingEdits(false);
     setSaveStatus('idle');
     clearSavedTimer();
   }, [noteId, flushSave, clearSavedTimer]);
