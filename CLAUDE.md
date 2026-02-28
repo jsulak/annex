@@ -45,7 +45,7 @@ npm run setup
 - [x] Auth (setup CLI, login route, bcrypt, session cookie, route protection)
 - [x] File store + Notes API (CRUD + rename, path safety)
 - [x] Frontend scaffold (login page, two-panel layout, theme CSS vars, Vite proxy)
-- [ ] Note list + editor (fetch list, CodeMirror on click)
+- [x] Note list + editor (fetch list, CodeMirror on click)
 - [ ] Save (auto-save debounced + Cmd+S)
 - [ ] Search (Flexsearch index, /search endpoint, omnibar highlighting)
 - [ ] New / delete notes (ID gen, trash deletion, filename-from-first-line)

@@ -1,4 +1,5 @@
 import { useStore } from '../store/useStore.js';
+import CodeMirrorEditor from './CodeMirrorEditor.js';
 
 export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
@@ -49,35 +50,10 @@ export default function EditorPane() {
         minWidth: 0,
       }}
     >
-      <div
-        style={{
-          padding: '8px 16px',
-          borderBottom: '1px solid var(--border)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '14px',
-          fontWeight: 600,
-          color: 'var(--text-primary)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {selectedNote.title || selectedNote.filename}
-      </div>
-      <textarea
-        readOnly
-        value={selectedNote.body}
-        style={{
-          flex: 1,
-          padding: '16px',
-          border: 'none',
-          resize: 'none',
-          background: 'var(--bg-editor)',
-          color: 'var(--text-primary)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '13px',
-          lineHeight: '1.6',
-          outline: 'none',
+      <CodeMirrorEditor
+        doc={selectedNote.body}
+        onUpdate={() => {
+          // Save will be wired in step 7
         }}
       />
     </div>
