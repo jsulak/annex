@@ -34,6 +34,7 @@ interface AppState {
   selectNote: (id: string) => Promise<void>;
   deselectNote: () => void;
   updateEtag: (etag: string) => void;
+  updateNoteInList: (id: string, modifiedAt: string, title: string, snippet: string, tags: string[], links: string[]) => void;
   createNote: (title?: string) => Promise<void>;
   deleteNote: (id: string) => Promise<boolean>;
   upsertNoteFromSSE: (id: string) => Promise<void>;
@@ -121,6 +122,16 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       selectedNote: s.selectedNote ? { ...s.selectedNote, etag } : null,
     })),
+
+  updateNoteInList: (id, modifiedAt, title, snippet, tags, links) =>
+    set((s) => {
+      const idx = s.notes.findIndex((n) => n.id === id);
+      if (idx < 0) return s;
+      const notes = [...s.notes];
+      notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links };
+      notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+      return { notes };
+    }),
 
   createNote: async (title?: string) => {
     const id = generateId();
