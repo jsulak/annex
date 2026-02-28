@@ -24,6 +24,8 @@ interface AppState {
   history: string[];
   historyIndex: number;
   quickOpenVisible: boolean;
+  tagsModalVisible: boolean;
+  backlinksVisible: boolean;
   _navigatingHistory: boolean;
   conflict: ConflictInfo | null;
   hasPendingEdits: boolean;
@@ -48,6 +50,9 @@ interface AppState {
   canGoBack: () => boolean;
   canGoForward: () => boolean;
   setQuickOpenVisible: (visible: boolean) => void;
+  setTagsModalVisible: (visible: boolean) => void;
+  setBacklinksVisible: (visible: boolean) => void;
+  toggleBacklinks: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -61,6 +66,8 @@ export const useStore = create<AppState>((set, get) => ({
   history: [],
   historyIndex: -1,
   quickOpenVisible: false,
+  tagsModalVisible: false,
+  backlinksVisible: false,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
@@ -305,4 +312,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setQuickOpenVisible: (visible: boolean) => set({ quickOpenVisible: visible }),
+  setTagsModalVisible: (visible: boolean) => set({ tagsModalVisible: visible }),
+  setBacklinksVisible: (visible: boolean) => set({ backlinksVisible: visible }),
+  toggleBacklinks: () => set((s) => ({ backlinksVisible: !s.backlinksVisible })),
 }));

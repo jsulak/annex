@@ -6,6 +6,7 @@ import Toolbar from './Toolbar.js';
 import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
 import QuickOpen from './QuickOpen.js';
+import TagsModal from './TagsModal.js';
 
 const STORAGE_KEY = 'zettelweb-panel-width';
 const DEFAULT_WIDTH = 280;
@@ -26,6 +27,7 @@ function getSavedWidth(): number {
 export default function AppLayout() {
   const fetchNotes = useStore((s) => s.fetchNotes);
   const quickOpenVisible = useStore((s) => s.quickOpenVisible);
+  const tagsModalVisible = useStore((s) => s.tagsModalVisible);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
   useNoteNavigation();
@@ -109,6 +111,7 @@ export default function AppLayout() {
         </div>
       </div>
       {quickOpenVisible && <QuickOpen />}
+      {tagsModalVisible && <TagsModal />}
     </div>
   );
 }

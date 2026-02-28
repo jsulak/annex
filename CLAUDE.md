@@ -54,7 +54,7 @@ npm run setup
 - [x] SSE file watcher (chokidar, /events endpoint, useSSE hook)
 - [x] Navigation (back/forward, Quick Open)
 - [x] Conflict detection (etag, If-Match, 409 handling)
-- [ ] Tags modal + Backlinks panel
+- [x] Tags modal + Backlinks panel
 - [ ] Settings panel (all options via PUT /config)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
