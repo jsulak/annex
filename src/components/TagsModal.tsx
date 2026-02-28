@@ -24,7 +24,15 @@ export default function TagsModal() {
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setTagsModalVisible(false);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [setTagsModalVisible]);
 
   useEffect(() => {
     let cancelled = false;

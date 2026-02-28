@@ -49,8 +49,8 @@ export function useNoteNavigation() {
         return;
       }
 
-      // Cmd+K — tags modal
-      if (e.key === 'k' && !e.shiftKey) {
+      // Cmd+Shift+K — tags modal
+      if (e.key === 'K' && e.shiftKey) {
         e.preventDefault();
         setTagsModalVisible(true);
         return;
