@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
@@ -99,7 +100,8 @@ async function start() {
 
   // Serve static frontend in production
   if (IS_PROD) {
-    const distPath = path.join(import.meta.dirname, '..', 'dist', 'client');
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const distPath = path.join(__dirname, '..', 'client');
     await app.register(fastifyStatic, {
       root: distPath,
       wildcard: false,

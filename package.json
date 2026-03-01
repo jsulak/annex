@@ -8,7 +8,7 @@
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc && vite build",
     "setup": "tsx server/setup.ts",
-    "start": "node server/dist/index.js"
+    "start": "node dist/server/index.js"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.5.0",
