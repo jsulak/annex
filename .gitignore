@@ -5,3 +5,7 @@ dist/
 *.syncthing*
 *~
 .*.~undo-tree~
+test-results/
+playwright-report/
+e2e/.auth/
+e2e/fixtures/.test-notes-dir
