@@ -62,7 +62,7 @@ npm run setup
 - [x] Link decorations (inline links collapse with clickable text + expand icon, bare URLs clickable, hover tooltip)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
-- [x] Deploy tooling (deploy.sh, ecosystem.config.cjs, Caddyfile.example)
+- [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [ ] Polish (keyboard help overlay, error states, responsive layout)
 
 ## Standing Instructions

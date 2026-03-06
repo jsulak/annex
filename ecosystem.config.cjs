@@ -1,3 +1,5 @@
+// Local dev reference only — the real production config is generated
+// by Ansible from ansible/templates/ecosystem.config.cjs.j2
 module.exports = {
   apps: [
     {

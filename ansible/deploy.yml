@@ -1,0 +1,56 @@
+---
+- name: Build app locally
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Run npm build
+      ansible.builtin.command:
+        cmd: npm run build
+        chdir: "{{ playbook_dir }}/.."
+      changed_when: true
+
+- name: Deploy to VPS
+  hosts: vps
+  become: true
+  become_user: "{{ app_user }}"
+  vars_files:
+    - vault.yml
+
+  tasks:
+    - name: Sync app files to remote
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ app_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=.git"
+          - "--exclude=.env"
+          - "--exclude=ansible"
+
+    - name: Template PM2 ecosystem config
+      ansible.builtin.template:
+        src: templates/ecosystem.config.cjs.j2
+        dest: "{{ app_dir }}/ecosystem.config.cjs"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0600"
+
+    - name: Install production dependencies
+      community.general.npm:
+        path: "{{ app_dir }}"
+        ci: true
+        production: true
+
+    - name: Start or restart app with PM2
+      ansible.builtin.command:
+        cmd: pm2 startOrRestart ecosystem.config.cjs --update-env
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Save PM2 process list
+      ansible.builtin.command:
+        cmd: pm2 save
+      changed_when: true

@@ -1,0 +1,6 @@
+app_user: zettelweb
+app_dir: /opt/zettelweb
+notes_dir: /home/zettelweb/notes
+app_port: 3000
+node_version: "20"
+domain: notes.example.com
