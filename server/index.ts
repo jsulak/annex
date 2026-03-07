@@ -98,6 +98,11 @@ async function start() {
     return { status: 'ok' };
   });
 
+  // Block search engine indexing
+  app.get('/robots.txt', async (_request, reply) => {
+    return reply.type('text/plain').send('User-agent: *\nDisallow: /\n');
+  });
+
   // Serve static frontend in production
   if (IS_PROD) {
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
