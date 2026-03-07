@@ -1,11 +1,13 @@
 TERRAFORM_DIR = terraform
 ANSIBLE_DIR = ansible
 APP_USER ?= zettelweb
+DOMAIN ?=
+EXTRA_VARS := $(if $(DOMAIN),-e "domain=$(DOMAIN)",)
 
 # Get the droplet IP from Terraform
 IP := $(shell cd $(TERRAFORM_DIR) && terraform output -raw droplet_ip 2>/dev/null)
 
-.PHONY: infra-init infra-plan infra-apply infra-destroy provision deploy wait-for-ssh
+.PHONY: infra-init infra-plan infra-apply infra-destroy provision deploy setup wait-for-ssh
 
 ## Terraform — expects DIGITALOCEAN_TOKEN env var
 infra-init:
@@ -38,9 +40,9 @@ provision:
 	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
 ifdef FIRST_RUN
-	cd $(ANSIBLE_DIR) && ANSIBLE_HOST_KEY_CHECKING=false ansible-playbook provision.yml -i '$(IP),' -u root --private-key=~/.ssh/$(TF_VAR_ssh_key_name)
+	cd $(ANSIBLE_DIR) && ANSIBLE_HOST_KEY_CHECKING=false ansible-playbook provision.yml -i '$(IP),' -u root --private-key=~/.ssh/$(TF_VAR_ssh_key_name) $(EXTRA_VARS)
 else
-	cd $(ANSIBLE_DIR) && ansible-playbook provision.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name)
+	cd $(ANSIBLE_DIR) && ansible-playbook provision.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) $(EXTRA_VARS)
 endif
 
 # Deploy runs as the app user (zettelweb).
@@ -49,3 +51,9 @@ deploy:
 	@test -n "$(SESSION_SECRET)" || (echo "Error: SESSION_SECRET env var is required." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
 	cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) -e "session_secret=$(SESSION_SECRET)"
+
+# Set the app password (interactive, first time only).
+setup:
+	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
+	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
+	ssh -t -i ~/.ssh/$(TF_VAR_ssh_key_name) $(APP_USER)@$(IP) "cd /opt/zettelweb && NODE_ENV=production NOTES_DIR=/home/zettelweb/notes node dist/server/setup.js"

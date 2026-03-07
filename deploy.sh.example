@@ -7,6 +7,9 @@ export SESSION_SECRET="change-me-generate-with-openssl-rand-hex-32"
 # SSH key name in DigitalOcean (also used as ~/.ssh/<name> for the private key)
 export TF_VAR_ssh_key_name="your-ssh-key-name"
 
+# Domain name for HTTPS (leave empty to serve on bare IP over HTTP)
+export DOMAIN=""
+
 # ── Usage ─────────────────────────────────────────────────
 # First-time setup (new droplet):
 #   ./deploy.sh init
@@ -28,6 +31,7 @@ case "${1:-}" in
     make wait-for-ssh
     FIRST_RUN=1 make provision
     make deploy
+    make setup
     ;;
   provision)
     make provision
