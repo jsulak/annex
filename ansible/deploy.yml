@@ -19,8 +19,6 @@
 
 - name: Deploy to VPS
   hosts: all
-  become: true
-  become_user: "{{ app_user }}"
   tasks:
     - name: Validate session_secret is set
       ansible.builtin.assert:
@@ -47,8 +45,6 @@
       ansible.builtin.template:
         src: templates/ecosystem.config.cjs.j2
         dest: "{{ app_dir }}/ecosystem.config.cjs"
-        owner: "{{ app_user }}"
-        group: "{{ app_user }}"
         mode: "0600"
       notify: Restart app
 

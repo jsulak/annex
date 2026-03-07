@@ -18,7 +18,23 @@
           - debian-keyring
           - debian-archive-keyring
           - apt-transport-https
+          - ufw
+          - fail2ban
+          - unattended-upgrades
+          - apt-listchanges
         state: present
+
+    # ── Automatic security updates ───────────────────────────
+    - name: Enable unattended-upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+          APT::Periodic::AutocleanInterval "7";
+        owner: root
+        group: root
+        mode: "0644"
 
     # ── App user ─────────────────────────────────────────────
     - name: Create app user
@@ -32,6 +48,89 @@
         user: "{{ app_user }}"
         key: "{{ lookup('file', '~/.ssh/' + lookup('env', 'TF_VAR_ssh_key_name') + '.pub') }}"
         state: present
+
+    # ── SSH hardening ────────────────────────────────────────
+    - name: Disable SSH password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+
+    - name: Disable SSH root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+
+    - name: Disable SSH challenge-response authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?KbdInteractiveAuthentication'
+        line: 'KbdInteractiveAuthentication no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+
+    - name: Restrict SSH to app user
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?AllowUsers'
+        line: 'AllowUsers {{ app_user }}'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+
+    # ── Fail2ban ─────────────────────────────────────────────
+    - name: Configure fail2ban for SSH
+      ansible.builtin.copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [DEFAULT]
+          bantime = 1h
+          findtime = 10m
+          maxretry = 5
+
+          [sshd]
+          enabled = true
+          port = ssh
+          backend = systemd
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart fail2ban
+
+    - name: Enable and start fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        enabled: true
+        state: started
+
+    # ── Firewall (UFW) ───────────────────────────────────────
+    - name: Allow SSH through UFW
+      community.general.ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow HTTP through UFW
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+
+    - name: Allow HTTPS through UFW
+      community.general.ufw:
+        rule: allow
+        port: "443"
+        proto: tcp
+
+    - name: Enable UFW with default deny
+      community.general.ufw:
+        state: enabled
+        default: deny
+        direction: incoming
 
     # ── Node.js ──────────────────────────────────────────────
     - name: Add NodeSource GPG key
@@ -73,7 +172,7 @@
         state: directory
         owner: "{{ app_user }}"
         group: "{{ app_user }}"
-        mode: "0755"
+        mode: "0750"
 
     # ── Caddy ────────────────────────────────────────────────
     - name: Add Caddy GPG key
@@ -126,3 +225,13 @@
       ansible.builtin.systemd:
         name: caddy
         state: reloaded
+
+    - name: Restart sshd
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+    - name: Restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted

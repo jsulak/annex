@@ -1,9 +1,24 @@
 {% if domain %}
 {{ domain }} {
 	reverse_proxy localhost:{{ app_port }}
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 }
 {% else %}
 :80 {
 	reverse_proxy localhost:{{ app_port }}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 }
 {% endif %}
