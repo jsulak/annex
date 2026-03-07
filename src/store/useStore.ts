@@ -170,7 +170,6 @@ export const useStore = create<AppState>((set, get) => ({
       if (idx < 0) return s;
       const notes = [...s.notes];
       notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links };
-      notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
       return { notes };
     }),
 
