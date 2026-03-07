@@ -65,6 +65,14 @@ npm run setup
 - [x] Deploy tooling (deploy.sh, ecosystem.config.cjs, Caddyfile.example)
 - [ ] Polish (keyboard help overlay, error states, responsive layout)
 
+## Testing
+
+Use test-driven development for any new feature or bugfix:
+- **Backend**: Write vitest API tests first (`test/*.test.ts`). Run with `npm test`.
+- **Frontend**: Write Playwright E2E tests (`e2e/*.spec.ts`) for UI behavior. Run with `npm run test:e2e`.
+- Write the failing test, then implement the fix/feature, then verify the test passes.
+- Choose the appropriate test level: vitest for API/logic, Playwright for UI interactions.
+
 ## Standing Instructions
 
 At the end of every session, update the Current Status checklist in this file to reflect what was completed.
