@@ -7,8 +7,39 @@ export SESSION_SECRET="change-me-generate-with-openssl-rand-hex-32"
 # SSH key name in DigitalOcean (also used as ~/.ssh/<name> for the private key)
 export TF_VAR_ssh_key_name="your-ssh-key-name"
 
-# Uncomment the step you want to run:
-# make infra-init
-# make infra-apply
-# make provision
-# make deploy
+# ── Usage ─────────────────────────────────────────────────
+# First-time setup (new droplet):
+#   ./deploy.sh init
+#
+# Re-provision existing droplet (e.g. update Caddy config):
+#   ./deploy.sh provision
+#
+# Deploy the app:
+#   ./deploy.sh deploy
+#
+# Full teardown and rebuild:
+#   ./deploy.sh destroy
+#   ./deploy.sh init
+
+case "${1:-}" in
+  init)
+    make infra-init
+    make infra-apply
+    make wait-for-ssh
+    FIRST_RUN=1 make provision
+    make deploy
+    ;;
+  provision)
+    make provision
+    ;;
+  deploy)
+    make deploy
+    ;;
+  destroy)
+    make infra-destroy
+    ;;
+  *)
+    echo "Usage: $0 {init|provision|deploy|destroy}"
+    exit 1
+    ;;
+esac
