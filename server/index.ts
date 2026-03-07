@@ -47,7 +47,10 @@ async function start() {
     process.exit(1);
   }
 
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    logger: true,
+    trustProxy: IS_PROD,
+  });
 
   // Security headers
   await app.register(helmet, {
