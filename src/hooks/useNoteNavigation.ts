@@ -50,14 +50,14 @@ export function useNoteNavigation() {
       }
 
       // Cmd+Shift+K — tags modal
-      if (e.key === 'K' && e.shiftKey) {
+      if ((e.key === 'K' || e.key === 'k') && e.shiftKey) {
         e.preventDefault();
         setTagsModalVisible(true);
         return;
       }
 
       // Cmd+Shift+B — toggle backlinks
-      if (e.key === 'B' && e.shiftKey) {
+      if ((e.key === 'B' || e.key === 'b') && e.shiftKey) {
         e.preventDefault();
         toggleBacklinks();
         return;
