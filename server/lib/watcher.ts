@@ -88,7 +88,7 @@ function isValidNoteFile(filename: string): boolean {
 export async function startWatcher(notesDir: string): Promise<void> {
   watcher = chokidar.watch(notesDir, {
     ignoreInitial: true,
-    ignored: /(^|[/\\])(_zettelweb|_trash|\.syncthing)/,
+    ignored: /(^|[/\\])(_annex|_trash|\.syncthing)/,
     depth: 0,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
   });

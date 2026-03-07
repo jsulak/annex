@@ -1,4 +1,4 @@
-# ZettelWeb
+# Annex
 
 Single-user self-hosted Zettelkasten web app — a clone of The Archive (zettelkasten.de). Full spec is in SPEC.md — read it before starting any work.
 
@@ -33,7 +33,7 @@ npm run setup
 ## Key Rules
 - `NOTES_DIR` is the canonical data store — never write note data anywhere else
 - All file paths must be validated to stay within `NOTES_DIR` (path traversal prevention)
-- `_zettelweb.json` and `_trash/` are excluded from the note index
+- `_annex.json` and `_trash/` are excluded from the note index
 - Syncthing temp files (`*.syncthing`) must be excluded from chokidar and the index
 - Session cookie must be `HttpOnly + Secure + SameSite=Strict`
 - Never re-fetch the full note list on SSE events — update individual entries only

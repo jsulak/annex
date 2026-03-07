@@ -10,7 +10,7 @@ const MARKER_FILE = path.join(import.meta.dirname, 'e2e', 'fixtures', '.test-not
 
 // Create temp dir eagerly so webServer commands can use it.
 // Teardown is handled by globalTeardown.
-const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zettelweb-e2e-'));
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-e2e-'));
 
 const config = {
   passwordHash: '$2b$12$6vrCipuW.vXwiXO1GaUcS.nahAIDZIkpG/aE/YL0zy8QPmvKjOpiO',
@@ -25,7 +25,7 @@ const config = {
     darkMode: 'auto',
   },
 };
-fs.writeFileSync(path.join(tmpDir, '_zettelweb.json'), JSON.stringify(config, null, 2));
+fs.writeFileSync(path.join(tmpDir, '_annex.json'), JSON.stringify(config, null, 2));
 
 for (const file of fs.readdirSync(SEED_DIR)) {
   fs.copyFileSync(path.join(SEED_DIR, file), path.join(tmpDir, file));

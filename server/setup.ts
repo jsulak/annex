@@ -50,12 +50,12 @@ function prompt(question: string, hidden = false): Promise<string> {
 }
 
 async function main() {
-  console.log('ZettelWeb Setup');
+  console.log('Annex Setup');
   console.log('===============\n');
 
   if (!process.env.NOTES_DIR) {
-    console.log('Note: NOTES_DIR not set. Config will be stored at ~/.zettelweb/config.json');
-    console.log('Set NOTES_DIR to store config alongside your notes as _zettelweb.json\n');
+    console.log('Note: NOTES_DIR not set. Config will be stored at ~/.annex/config.json');
+    console.log('Set NOTES_DIR to store config alongside your notes as _annex.json\n');
   }
 
   const config = await readConfig();

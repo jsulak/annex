@@ -61,7 +61,7 @@ async function start() {
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
     secret: SESSION_SECRET,
-    cookieName: 'zettelweb_session',
+    cookieName: 'annex_session',
     cookie: {
       maxAge: SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
       httpOnly: true,
@@ -126,7 +126,7 @@ async function start() {
 
   const host = IS_PROD ? '127.0.0.1' : '0.0.0.0';
   await app.listen({ port: PORT, host });
-  console.log(`ZettelWeb server listening on port ${PORT}`);
+  console.log(`Annex server listening on port ${PORT}`);
   console.log(`Notes directory: ${resolvedNotesDir}`);
 }
 

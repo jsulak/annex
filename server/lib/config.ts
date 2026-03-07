@@ -32,9 +32,9 @@ const DEFAULT_CONFIG: Config = {
 function getConfigPath(): string {
   const notesDir = process.env.NOTES_DIR;
   if (notesDir) {
-    return path.join(notesDir, '_zettelweb.json');
+    return path.join(notesDir, '_annex.json');
   }
-  const configDir = process.env.CONFIG_DIR || path.join(process.env.HOME || '~', '.zettelweb');
+  const configDir = process.env.CONFIG_DIR || path.join(process.env.HOME || '~', '.annex');
   return path.join(configDir, 'config.json');
 }
 

@@ -1,11 +1,11 @@
-# ZettelWeb — Application Specification
+# Annex — Application Specification
 **A web-based clone of The Archive (zettelkasten.de)**
 
 ---
 
 ## 1. Overview
 
-ZettelWeb is a single-user, self-hosted web application that replicates the core functionality of The Archive (macOS). It runs on a Linux VPS and is accessible from any machine via a browser after authenticating. Notes are stored as plain Markdown files in a directory on the VPS, which is kept in sync with your Mac (and from there to iCloud/iPhone/iPad) via Syncthing. The server exposes a small REST API for reading and writing files; the React frontend talks only to that API.
+Annex is a single-user, self-hosted web application that replicates the core functionality of The Archive (macOS). It runs on a Linux VPS and is accessible from any machine via a browser after authenticating. Notes are stored as plain Markdown files in a directory on the VPS, which is kept in sync with your Mac (and from there to iCloud/iPhone/iPad) via Syncthing. The server exposes a small REST API for reading and writing files; the React frontend talks only to that API.
 
 ---
 
@@ -27,9 +27,9 @@ ZettelWeb is a single-user, self-hosted web application that replicates the core
 │                                 │                            │
 │                          Caddy (TLS termination)             │
 │                                 │                            │
-│                      ZettelWeb Server (Node.js :3000)        │
+│                      Annex Server (Node.js :3000)        │
 │                                 │                            │
-│                        /home/zettelweb/notes/                │
+│                        /home/annex/notes/                │
 │                                 │                            │
 │                     Syncthing (daemon on VPS)                │
 │                                 │                            │
@@ -45,7 +45,7 @@ ZettelWeb is a single-user, self-hosted web application that replicates the core
 └──────────────────────────────────────────────────────────────┘
 ```
 
-The server is a single Node.js process. It serves the compiled React frontend as static files and also runs the API. There is no separate database — note content lives in `.md` files, and all other persistent state (session, saved searches, settings) lives in a `_zettelweb.json` config file alongside the notes.
+The server is a single Node.js process. It serves the compiled React frontend as static files and also runs the API. There is no separate database — note content lives in `.md` files, and all other persistent state (session, saved searches, settings) lives in a `_annex.json` config file alongside the notes.
 
 ---
 
@@ -104,8 +104,8 @@ echo "deb https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sourc
 sudo apt update && sudo apt install syncthing
 
 # Run as a systemd service for the deploy user
-sudo systemctl enable syncthing@zettelweb
-sudo systemctl start syncthing@zettelweb
+sudo systemctl enable syncthing@annex
+sudo systemctl start syncthing@annex
 ```
 
 On the Mac:
@@ -113,11 +113,11 @@ On the Mac:
 - Open the Syncthing web UI on both machines (`localhost:8384`).
 - Add each machine as a device (exchange device IDs).
 - Share the notes folder from the Mac to the VPS.
-- Set the VPS folder path to `/home/zettelweb/notes`.
+- Set the VPS folder path to `/home/annex/notes`.
 
 ### 6.3 Conflict Handling
 
-Syncthing detects sync conflicts and creates a conflict copy file (e.g., `202401151432 Note.sync-conflict-....md`) rather than silently overwriting. ZettelWeb's server-side conflict detection (etag / If-Match) catches the case where the web app and an external edit race simultaneously, returning `409` to the client.
+Syncthing detects sync conflicts and creates a conflict copy file (e.g., `202401151432 Note.sync-conflict-....md`) rather than silently overwriting. Annex's server-side conflict detection (etag / If-Match) catches the case where the web app and an external edit race simultaneously, returning `409` to the client.
 
 ### 6.4 Alternative: rclone + iCloud WebDAV
 
@@ -128,7 +128,7 @@ If Syncthing is not desirable, `rclone` can mount iCloud Drive via WebDAV on Lin
 rclone config  # provider: WebDAV, url: https://idmsa.apple.com/...
 
 # Mount (run as a systemd service)
-rclone mount icloud:Zettelkasten /home/zettelweb/notes \
+rclone mount icloud:Zettelkasten /home/annex/notes \
   --vfs-cache-mode writes \
   --daemon
 ```
@@ -166,7 +166,7 @@ UTF-8, LF line endings.
 
 ### 7.4 Config File
 
-A file `_zettelweb.json` is maintained in the notes directory (or at `~/.zettelweb/config.json` if preferred). It stores:
+A file `_annex.json` is maintained in the notes directory (or at `~/.annex/config.json` if preferred). It stores:
 
 ```json
 {
@@ -196,7 +196,7 @@ Single-user password authentication. No OAuth, no magic links, no email. On firs
 
 ### 8.3 Session Persistence
 
-Sessions survive server restarts via a JSON file at `~/.zettelweb/sessions.json`. On restart, valid non-expired sessions are reloaded.
+Sessions survive server restarts via a JSON file at `~/.annex/sessions.json`. On restart, valid non-expired sessions are reloaded.
 
 ### 8.4 Password Change
 
@@ -443,8 +443,8 @@ Development runs entirely on your Mac. No VPS, no Syncthing needed until deploym
 
 ```bash
 # Prerequisites: Node.js 20+, npm
-git clone https://github.com/you/zettelweb
-cd zettelweb
+git clone https://github.com/you/annex
+cd annex
 npm install
 
 # Set initial password
@@ -541,23 +541,23 @@ make infra-apply
 # 2. Provision the VPS (runs as root, first time only)
 make provision
 
-# 3. Deploy the app (runs as zettelweb user)
+# 3. Deploy the app (runs as annex user)
 make deploy
 ```
 
 **Provision** (`make provision`) runs once as `root` on a fresh droplet and:
-- Creates the `zettelweb` user with SSH key access
+- Creates the `annex` user with SSH key access
 - Installs Node.js 20, PM2, Caddy
-- **Hardens SSH**: disables root login, password auth, challenge-response; restricts access to `zettelweb` user only
+- **Hardens SSH**: disables root login, password auth, challenge-response; restricts access to `annex` user only
 - **Installs fail2ban**: SSH brute-force protection (5 attempts / 10min → 1h ban)
 - **Enables UFW**: default deny inbound, allow SSH/80/443 (defense-in-depth alongside DO cloud firewall)
 - **Enables unattended-upgrades**: automatic daily security patches
 - Configures Caddy with security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
 - Sets up PM2 systemd startup for the app user
 
-After provisioning, root login is disabled. All subsequent access is via the `zettelweb` user.
+After provisioning, root login is disabled. All subsequent access is via the `annex` user.
 
-**Deploy** (`make deploy`) runs as `zettelweb` and:
+**Deploy** (`make deploy`) runs as `annex` and:
 - Builds the app locally (`npm ci` + `npm run build`)
 - Rsyncs the built app to the VPS (excluding `node_modules`, `.git`, `src`, `test`, `e2e`, `ansible`, `terraform`)
 - Templates the PM2 ecosystem config with the `SESSION_SECRET`
@@ -567,7 +567,7 @@ After provisioning, root login is disabled. All subsequent access is via the `ze
 ### 18.4 Runtime Environment
 
 ```bash
-NOTES_DIR=/home/zettelweb/notes    # Set by PM2 ecosystem config
+NOTES_DIR=/home/annex/notes    # Set by PM2 ecosystem config
 PORT=3000                           # Default: 3000
 SESSION_SECRET=<64 random chars>   # Passed via -e at deploy time
 SESSION_MAX_AGE_DAYS=30            # Optional, default 30
@@ -583,8 +583,8 @@ Caddy is configured via Ansible template (`ansible/templates/Caddyfile.j2`). Whe
 ### 18.6 Terraform Resources
 
 Defined in `terraform/`:
-- `digitalocean_droplet.zettelweb` — the VPS
-- `digitalocean_firewall.zettelweb` — cloud firewall (SSH, HTTP, HTTPS, ICMP inbound; all outbound)
+- `digitalocean_droplet.annex` — the VPS
+- `digitalocean_firewall.annex` — cloud firewall (SSH, HTTP, HTTPS, ICMP inbound; all outbound)
 
 State is stored locally (gitignored). Variables are configured via `terraform.tfvars` (gitignored) or env vars.
 
@@ -622,7 +622,7 @@ No dependency on the File System Access API. Works in all modern browsers.
 ## 21. Project Structure
 
 ```
-zettelweb/
+annex/
 ├── server/
 │   ├── index.ts                  # Fastify entry, plugin registration, static serving
 │   ├── auth.ts                   # Login, session, rate limiting, CSRF
@@ -638,7 +638,7 @@ zettelweb/
 │   │   ├── noteParser.ts         # Extract title, tags, wikilinks
 │   │   ├── fileStore.ts          # Read/write/delete/rename with path safety
 │   │   ├── watcher.ts            # chokidar + SSE broadcasting
-│   │   └── config.ts             # Read/write _zettelweb.json
+│   │   └── config.ts             # Read/write _annex.json
 │   └── setup.ts                  # CLI: set initial password
 ├── src/
 │   ├── main.tsx
@@ -729,7 +729,7 @@ zettelweb/
 
 **Server:**
 - Use `fs.promises` (Node built-in) for all file operations. No third-party file library needed.
-- `chokidar.watch(NOTES_DIR, { ignoreInitial: true, ignored: /(^|[/\\])(_zettelweb|_trash|\.syncthing)/ })` — also ignore Syncthing temp files.
+- `chokidar.watch(NOTES_DIR, { ignoreInitial: true, ignored: /(^|[/\\])(_annex|_trash|\.syncthing)/ })` — also ignore Syncthing temp files.
 - SSE endpoint: send `comment: ping\n\n` every 30 seconds to prevent Caddy proxy timeouts.
 - Conflict detection: `PUT /notes/:id` accepts `If-Match: <etag>`. If `fs.stat(file).mtime.toString(16)` doesn't match, return `409` with `{ conflict: true, serverBody: "..." }`.
 - Path traversal guard: `const safe = path.resolve(NOTES_DIR, filename); assert(safe.startsWith(path.resolve(NOTES_DIR)))`.
@@ -753,7 +753,7 @@ zettelweb/
 ## 24. CLAUDE.md (Place in Project Root)
 
 ```markdown
-# ZettelWeb
+# Annex
 
 Single-user self-hosted Zettelkasten web app. Full spec is in SPEC.md — read it before starting.
 
@@ -777,7 +777,7 @@ Open: http://localhost:5173
 ## Key rules
 - NOTES_DIR is the canonical data store — never write note data anywhere else
 - All file paths must be validated to stay within NOTES_DIR (path traversal prevention)
-- _zettelweb.json and _trash/ are excluded from the note index
+- _annex.json and _trash/ are excluded from the note index
 - Syncthing temp files (*.syncthing) must be excluded from chokidar and the index
 - Session cookie must be HttpOnly + Secure + SameSite=Strict
 
