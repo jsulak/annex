@@ -69,17 +69,14 @@ The server is a single Node.js process. It serves the compiled React frontend as
 
 ---
 
-## 5. VPS Recommendation
+## 5. VPS & Infrastructure
 
-**Hetzner CAX11** (~€4–5/month) is the recommended host:
-- 2 ARM vCPU, 4 GB RAM, 40 GB SSD
-- Ubuntu 24.04 LTS available
-- Excellent network, EU datacentres (or US via Ashburn)
-- No egress fees on reasonable usage
+**DigitalOcean** is the primary host, provisioned via Terraform:
+- Droplet: `s-1vcpu-512mb-10gb` (~$4/month), Debian 12
+- DigitalOcean Cloud Firewall (Terraform-managed): SSH, HTTP, HTTPS, ICMP only
+- Region configurable (default: `nyc1`)
 
-**DigitalOcean Basic Droplet** ($6/month) is a solid alternative if you prefer a US-based provider with more beginner-friendly documentation.
-
-Either is vastly over-specced for this app. The Node process uses ~100 MB RAM at rest.
+Infrastructure is defined as code in `terraform/` and configured via `ansible/`. See Section 18 for the full workflow.
 
 ---
 
@@ -214,9 +211,11 @@ Sessions survive server restarts via a JSON file at `~/.zettelweb/sessions.json`
 - All API routes require a valid session; unauthenticated requests receive `401`.
 - HTTPS enforced by Caddy in production.
 - CSRF protection via `@fastify/csrf-protection` (double-submit cookie).
-- Security headers via `@fastify/helmet`.
+- Security headers via `@fastify/helmet` (app-level) and Caddy (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy).
 - Rate limiting on `/api/v1/auth/login` via `@fastify/rate-limit`.
 - Path traversal prevention: all file paths resolved with `path.resolve()` and asserted to remain within `NOTES_DIR`.
+- Node.js binds to `127.0.0.1` in production — only Caddy is publicly reachable.
+- See Section 18.3 for VPS-level hardening (SSH, fail2ban, UFW, unattended-upgrades).
 
 ---
 
@@ -510,107 +509,84 @@ This confirms the static file serving and built frontend work correctly before d
 
 ## 18. Deployment
 
-### 18.1 Environment Variables
+Deployment is fully automated via **Terraform** (infrastructure) and **Ansible** (provisioning + deploys). A `Makefile` orchestrates both.
+
+### 18.1 Prerequisites
+
+- Terraform >= 1.0
+- Ansible (with `community.general` and `ansible.posix` collections)
+- A DigitalOcean account and API token
+- An SSH key already added to DigitalOcean
+
+### 18.2 Environment Variables
 
 ```bash
-NOTES_DIR=/home/zettelweb/notes    # Required
+# Required for all steps
+export DIGITALOCEAN_TOKEN="dop_v1_..."
+export TF_VAR_ssh_key_name="your-ssh-key-name"   # Must match both DO and ~/.ssh/<name>
+
+# Required for deploy only
+export SESSION_SECRET="$(openssl rand -hex 32)"
+```
+
+A `deploy.sh.example` is provided as a template — copy to `deploy.sh` (gitignored) and fill in values.
+
+### 18.3 Workflow
+
+```bash
+# 1. Create the droplet + cloud firewall
+make infra-init    # one-time
+make infra-apply
+
+# 2. Provision the VPS (runs as root, first time only)
+make provision
+
+# 3. Deploy the app (runs as zettelweb user)
+make deploy
+```
+
+**Provision** (`make provision`) runs once as `root` on a fresh droplet and:
+- Creates the `zettelweb` user with SSH key access
+- Installs Node.js 20, PM2, Caddy
+- **Hardens SSH**: disables root login, password auth, challenge-response; restricts access to `zettelweb` user only
+- **Installs fail2ban**: SSH brute-force protection (5 attempts / 10min → 1h ban)
+- **Enables UFW**: default deny inbound, allow SSH/80/443 (defense-in-depth alongside DO cloud firewall)
+- **Enables unattended-upgrades**: automatic daily security patches
+- Configures Caddy with security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- Sets up PM2 systemd startup for the app user
+
+After provisioning, root login is disabled. All subsequent access is via the `zettelweb` user.
+
+**Deploy** (`make deploy`) runs as `zettelweb` and:
+- Builds the app locally (`npm ci` + `npm run build`)
+- Rsyncs the built app to the VPS (excluding `node_modules`, `.git`, `src`, `test`, `e2e`, `ansible`, `terraform`)
+- Templates the PM2 ecosystem config with the `SESSION_SECRET`
+- Installs production dependencies
+- Restarts via PM2 and waits for the health check to pass
+
+### 18.4 Runtime Environment
+
+```bash
+NOTES_DIR=/home/zettelweb/notes    # Set by PM2 ecosystem config
 PORT=3000                           # Default: 3000
-SESSION_SECRET=<64 random chars>   # Required — generate with: openssl rand -hex 32
+SESSION_SECRET=<64 random chars>   # Passed via -e at deploy time
 SESSION_MAX_AGE_DAYS=30            # Optional, default 30
-CONFIG_DIR=/home/zettelweb/.zettelweb  # Optional
 NODE_ENV=production
 ```
 
-### 18.2 VPS Initial Setup (Ubuntu 24.04)
-
-```bash
-# 1. Create a dedicated user
-sudo adduser zettelweb
-sudo mkdir -p /home/zettelweb/notes
-
-# 2. Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-
-# 3. Install PM2 globally
-sudo npm install -g pm2
-
-# 4. Install Caddy
-sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-sudo apt update && sudo apt install caddy
-
-# 5. Install Syncthing (see Section 6.2)
-```
-
-### 18.3 Deploy the App
-
-```bash
-# On your Mac — build and copy to VPS
-npm run build
-rsync -avz --exclude node_modules . zettelweb@your-vps-ip:/home/zettelweb/app/
-
-# On the VPS
-cd /home/zettelweb/app
-npm ci --production
-npm run setup   # set password (first time only)
-```
-
-### 18.4 PM2 Process Config
-
-`ecosystem.config.js` in project root:
-
-```js
-module.exports = {
-  apps: [{
-    name: 'zettelweb',
-    script: './server/index.js',  // or 'tsx server/index.ts' if not pre-compiling
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000,
-      NOTES_DIR: '/home/zettelweb/notes',
-      SESSION_SECRET: 'your-openssl-rand-hex-32-output-here',
-      CONFIG_DIR: '/home/zettelweb/.zettelweb',
-    }
-  }]
-}
-```
-
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup   # prints a command to run — run it to survive reboots
-```
+The PM2 ecosystem config is templated by Ansible at `{{ app_dir }}/ecosystem.config.cjs` with mode `0600`. It includes `max_memory_restart: '200M'` to prevent OOM.
 
 ### 18.5 Caddy Config
 
-`/etc/caddy/Caddyfile`:
+Caddy is configured via Ansible template (`ansible/templates/Caddyfile.j2`). When a `domain` is set in `ansible/group_vars/all.yml`, Caddy serves HTTPS with automatic Let's Encrypt certificates and HSTS. When `domain` is empty (default), Caddy serves on `:80` for initial testing.
 
-```
-notes.yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
+### 18.6 Terraform Resources
 
-```bash
-sudo systemctl reload caddy
-```
+Defined in `terraform/`:
+- `digitalocean_droplet.zettelweb` — the VPS
+- `digitalocean_firewall.zettelweb` — cloud firewall (SSH, HTTP, HTTPS, ICMP inbound; all outbound)
 
-Point your domain's DNS A record at the VPS IP. Caddy automatically obtains and renews a Let's Encrypt certificate. Done — the app is live at `https://notes.yourdomain.com`.
-
-### 18.6 Deploy Script
-
-Add a `deploy.sh` to the project root for subsequent deploys:
-
-```bash
-#!/bin/bash
-set -e
-npm run build
-rsync -avz --exclude node_modules --exclude .git . zettelweb@your-vps-ip:/home/zettelweb/app/
-ssh zettelweb@your-vps-ip "cd /home/zettelweb/app && npm ci --production && pm2 restart zettelweb"
-echo "Deployed."
-```
+State is stored locally (gitignored). Variables are configured via `terraform.tfvars` (gitignored) or env vars.
 
 ---
 
@@ -701,9 +677,22 @@ zettelweb/
 ├── vite.config.ts
 ├── tsconfig.json
 ├── tailwind.config.ts
-├── ecosystem.config.js           # PM2
-├── deploy.sh                     # One-command deploy
-├── Caddyfile.example
+├── Makefile                     # Orchestrates Terraform + Ansible
+├── deploy.sh.example            # Template for env vars
+├── ansible/
+│   ├── ansible.cfg
+│   ├── provision.yml            # First-time VPS setup + hardening
+│   ├── deploy.yml               # Build + deploy app
+│   ├── group_vars/all.yml       # Shared variables
+│   ├── inventory.ini
+│   └── templates/
+│       ├── Caddyfile.j2
+│       └── ecosystem.config.cjs.j2
+├── terraform/
+│   ├── main.tf                  # Droplet + firewall
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── terraform.tfvars.example
 ├── SPEC.md                       # This file
 ├── CLAUDE.md                     # Claude Code session briefing
 └── package.json
@@ -731,7 +720,7 @@ zettelweb/
 16. **Settings panel**: All options persisted via `PUT /config`.
 17. **Saved searches**: Save/restore, display below search bar.
 18. **Asset serving**: `GET /assets/:filename` for inline images in preview.
-19. **Deploy script + PM2 config + Caddyfile.example**.
+19. **Deploy tooling**: Terraform IaC, Ansible provision + deploy playbooks, Makefile, VPS hardening.
 20. **Polish**: Keyboard shortcut help (`?`), full error states, responsive layout.
 
 ---
@@ -746,6 +735,8 @@ zettelweb/
 - Path traversal guard: `const safe = path.resolve(NOTES_DIR, filename); assert(safe.startsWith(path.resolve(NOTES_DIR)))`.
 - Never follow symlinks outside `NOTES_DIR`.
 - Filter these filenames from the note list: anything starting with `_`, `.`, or containing `.sync-conflict` should still be indexed but flagged so the UI can show them distinctly.
+
+- Production server binds to `127.0.0.1` (not `0.0.0.0`) — only Caddy should face the internet. Dev binds `0.0.0.0` for convenience.
 
 **Frontend:**
 - On `401` from any API call → `window.location.href = '/login'`.
@@ -772,7 +763,7 @@ Single-user self-hosted Zettelkasten web app. Full spec is in SPEC.md — read i
 - Notes: plain .md files on the filesystem — no database
 - Auth: bcrypt password + HTTP-only session cookie
 - Sync: Syncthing (VPS ↔ Mac) — not needed for local dev
-- Production: Hetzner VPS, Caddy (HTTPS), PM2 (process manager)
+- Production: DigitalOcean VPS, Caddy (HTTPS), PM2 (process manager)
 
 ## Local dev
 Terminal 1 (backend):
@@ -815,4 +806,4 @@ Open: http://localhost:5173
 
 ---
 
-*Spec version: 3.0 — February 2026*
+*Spec version: 3.1 — March 2026*
