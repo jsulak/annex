@@ -8,7 +8,7 @@ Single-user self-hosted Zettelkasten web app — a clone of The Archive (zettelk
 - Notes: plain `.md` files on the filesystem — no database
 - Auth: bcrypt password + HTTP-only session cookie
 - Sync: Syncthing (VPS ↔ Mac) — not needed for local dev
-- Production: Hetzner VPS, Caddy (HTTPS), PM2 (process manager)
+- Production: DigitalOcean VPS, Caddy (HTTPS), PM2 (process manager)
 
 ## Local Dev
 
