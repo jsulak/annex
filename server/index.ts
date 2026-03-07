@@ -116,7 +116,8 @@ async function start() {
     });
   }
 
-  await app.listen({ port: PORT, host: '0.0.0.0' });
+  const host = IS_PROD ? '127.0.0.1' : '0.0.0.0';
+  await app.listen({ port: PORT, host });
   console.log(`ZettelWeb server listening on port ${PORT}`);
   console.log(`Notes directory: ${resolvedNotesDir}`);
 }
