@@ -49,6 +49,15 @@
         key: "{{ lookup('file', '~/.ssh/' + lookup('env', 'TF_VAR_ssh_key_name') + '.pub') }}"
         state: present
 
+    - name: Grant passwordless sudo to app user
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ app_user }}"
+        content: "{{ app_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+
     # ── SSH hardening ────────────────────────────────────────
     - name: Disable SSH password authentication
       ansible.builtin.lineinfile:
