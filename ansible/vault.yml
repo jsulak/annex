@@ -1,3 +1,0 @@
-# Encrypt this file with: ansible-vault encrypt vault.yml
-# Then replace the placeholder below with a real secret.
-session_secret: CHANGE_ME_RUN_ANSIBLE_VAULT_ENCRYPT

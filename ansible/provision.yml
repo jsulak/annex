@@ -1,10 +1,7 @@
 ---
 - name: Provision ZettelWeb VPS
-  hosts: vps
+  hosts: all
   become: true
-  vars_files:
-    - vault.yml
-
   tasks:
     # ── System packages ──────────────────────────────────────
     - name: Update apt cache
@@ -17,7 +14,6 @@
         name:
           - curl
           - rsync
-          - ufw
           - gnupg
           - debian-keyring
           - debian-archive-keyring
@@ -34,18 +30,19 @@
     - name: Authorize SSH key for app user
       ansible.posix.authorized_key:
         user: "{{ app_user }}"
-        key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+        key: "{{ lookup('file', '~/.ssh/' + lookup('env', 'TF_VAR_ssh_key_name') + '.pub') }}"
         state: present
 
     # ── Node.js ──────────────────────────────────────────────
     - name: Add NodeSource GPG key
-      ansible.builtin.apt_key:
+      ansible.builtin.get_url:
         url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
-        state: present
+        dest: /usr/share/keyrings/nodesource.asc
+        mode: "0644"
 
     - name: Add NodeSource repository
       ansible.builtin.apt_repository:
-        repo: "deb https://deb.nodesource.com/node_{{ node_version }}.x nodistro main"
+        repo: "deb [signed-by=/usr/share/keyrings/nodesource.asc] https://deb.nodesource.com/node_{{ node_version }}.x nodistro main"
         state: present
         filename: nodesource
 
@@ -80,13 +77,14 @@
 
     # ── Caddy ────────────────────────────────────────────────
     - name: Add Caddy GPG key
-      ansible.builtin.apt_key:
+      ansible.builtin.get_url:
         url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
-        state: present
+        dest: /usr/share/keyrings/caddy.asc
+        mode: "0644"
 
     - name: Add Caddy repository
       ansible.builtin.apt_repository:
-        repo: "deb https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+        repo: "deb [signed-by=/usr/share/keyrings/caddy.asc] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
         state: present
         filename: caddy-stable
 
@@ -111,34 +109,16 @@
         enabled: true
         state: started
 
-    # ── Firewall ─────────────────────────────────────────────
-    - name: Allow SSH through UFW
-      community.general.ufw:
-        rule: allow
-        port: "22"
-        proto: tcp
-
-    - name: Allow HTTP through UFW
-      community.general.ufw:
-        rule: allow
-        port: "80"
-        proto: tcp
-
-    - name: Allow HTTPS through UFW
-      community.general.ufw:
-        rule: allow
-        port: "443"
-        proto: tcp
-
-    - name: Enable UFW
-      community.general.ufw:
-        state: enabled
-        default: deny
-
     # ── PM2 startup ──────────────────────────────────────────
+    - name: Check if PM2 startup is configured
+      ansible.builtin.stat:
+        path: "/etc/systemd/system/pm2-{{ app_user }}.service"
+      register: pm2_service
+
     - name: Configure PM2 startup for app user
       ansible.builtin.command:
         cmd: "env PATH=$PATH:/usr/bin pm2 startup systemd -u {{ app_user }} --hp /home/{{ app_user }}"
+      when: not pm2_service.stat.exists
       changed_when: true
 
   handlers:

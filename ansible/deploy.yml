@@ -5,6 +5,12 @@
   gather_facts: false
 
   tasks:
+    - name: Install dependencies
+      ansible.builtin.command:
+        cmd: npm ci
+        chdir: "{{ playbook_dir }}/.."
+      changed_when: true
+
     - name: Run npm build
       ansible.builtin.command:
         cmd: npm run build
@@ -12,13 +18,15 @@
       changed_when: true
 
 - name: Deploy to VPS
-  hosts: vps
+  hosts: all
   become: true
   become_user: "{{ app_user }}"
-  vars_files:
-    - vault.yml
-
   tasks:
+    - name: Validate session_secret is set
+      ansible.builtin.assert:
+        that: session_secret | default('') | length > 0
+        fail_msg: "session_secret is required. Pass via: -e session_secret=..."
+        quiet: true
     - name: Sync app files to remote
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../"
@@ -29,6 +37,11 @@
           - "--exclude=.git"
           - "--exclude=.env"
           - "--exclude=ansible"
+          - "--exclude=terraform"
+          - "--exclude=test"
+          - "--exclude=e2e"
+          - "--exclude=src"
+      notify: Restart app
 
     - name: Template PM2 ecosystem config
       ansible.builtin.template:
@@ -37,20 +50,52 @@
         owner: "{{ app_user }}"
         group: "{{ app_user }}"
         mode: "0600"
+      notify: Restart app
 
     - name: Install production dependencies
       community.general.npm:
         path: "{{ app_dir }}"
         ci: true
         production: true
+      notify: Restart app
 
-    - name: Start or restart app with PM2
+    - name: Check if app is running in PM2
       ansible.builtin.command:
-        cmd: pm2 startOrRestart ecosystem.config.cjs --update-env
+        cmd: pm2 id zettelweb
+      register: pm2_id
+      changed_when: false
+      failed_when: false
+
+    - name: Start app if not running
+      ansible.builtin.command:
+        cmd: pm2 start ecosystem.config.cjs
         chdir: "{{ app_dir }}"
+      when: pm2_id.stdout == "[]"
       changed_when: true
 
     - name: Save PM2 process list
       ansible.builtin.command:
         cmd: pm2 save
+      changed_when: false
+
+    - name: Wait for app to be healthy
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/api/v1/health"
+        return_content: true
+      register: health
+      until: health.status == 200
+      retries: 10
+      delay: 2
+
+  handlers:
+    - name: Restart app
+      ansible.builtin.command:
+        cmd: pm2 startOrRestart ecosystem.config.cjs --update-env
+        chdir: "{{ app_dir }}"
       changed_when: true
+      notify: Save PM2
+
+    - name: Save PM2
+      ansible.builtin.command:
+        cmd: pm2 save
+      changed_when: false
