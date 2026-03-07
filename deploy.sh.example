@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export DIGITALOCEAN_TOKEN="dop_v1_..."
+export SESSION_SECRET="change-me-generate-with-openssl-rand-hex-32"
+
+# SSH key name in DigitalOcean (also used as ~/.ssh/<name> for the private key)
+export TF_VAR_ssh_key_name="your-ssh-key-name"
+
+# Uncomment the step you want to run:
+# make infra-init
+# make infra-apply
+# make provision
+# make deploy

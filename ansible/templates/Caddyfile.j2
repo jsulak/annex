@@ -1,3 +1,9 @@
+{% if domain %}
 {{ domain }} {
 	reverse_proxy localhost:{{ app_port }}
 }
+{% else %}
+:80 {
+	reverse_proxy localhost:{{ app_port }}
+}
+{% endif %}

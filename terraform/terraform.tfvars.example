@@ -1,0 +1,5 @@
+# Preferred: set DIGITALOCEAN_TOKEN env var instead of this file.
+# do_token     = "dop_v1_..."
+
+ssh_key_name = "your-ssh-key-name"
+region       = "nyc1"

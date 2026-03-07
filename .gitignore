@@ -9,3 +9,12 @@ test-results/
 playwright-report/
 e2e/.auth/
 e2e/fixtures/.test-notes-dir
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+deploy.sh
+
