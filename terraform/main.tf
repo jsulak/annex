@@ -19,19 +19,19 @@ data "digitalocean_ssh_key" "default" {
   name = var.ssh_key_name
 }
 
-resource "digitalocean_droplet" "zettelweb" {
-  name     = "zettelweb"
+resource "digitalocean_droplet" "annex" {
+  name     = "annex"
   image    = "debian-12-x64"
   size     = "s-1vcpu-512mb-10gb"
   region   = var.region
   ssh_keys = [data.digitalocean_ssh_key.default.id]
 
-  tags = ["zettelweb"]
+  tags = ["annex"]
 }
 
-resource "digitalocean_firewall" "zettelweb" {
-  name        = "zettelweb"
-  droplet_ids = [digitalocean_droplet.zettelweb.id]
+resource "digitalocean_firewall" "annex" {
+  name        = "annex"
+  droplet_ids = [digitalocean_droplet.annex.id]
 
   inbound_rule {
     protocol         = "tcp"

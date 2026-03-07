@@ -26,7 +26,7 @@ export interface TestContext {
 
 export async function startTestServer(): Promise<TestContext> {
   // Create temp dir with seed notes
-  const notesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zettelweb-test-'));
+  const notesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-test-'));
 
   const config = {
     passwordHash: '$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy',
@@ -41,7 +41,7 @@ export async function startTestServer(): Promise<TestContext> {
       darkMode: 'auto',
     },
   };
-  fs.writeFileSync(path.join(notesDir, '_zettelweb.json'), JSON.stringify(config, null, 2));
+  fs.writeFileSync(path.join(notesDir, '_annex.json'), JSON.stringify(config, null, 2));
 
   for (const file of fs.readdirSync(SEED_DIR)) {
     fs.copyFileSync(path.join(SEED_DIR, file), path.join(notesDir, file));
@@ -55,7 +55,7 @@ export async function startTestServer(): Promise<TestContext> {
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
     secret: 'testsecrettestsecrettestsecrettest',
-    cookieName: 'zettelweb_session',
+    cookieName: 'annex_session',
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,

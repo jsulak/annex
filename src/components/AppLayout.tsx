@@ -9,7 +9,7 @@ import QuickOpen from './QuickOpen.js';
 import TagsModal from './TagsModal.js';
 import SettingsPanel from './SettingsPanel.js';
 
-const STORAGE_KEY = 'zettelweb-panel-width';
+const STORAGE_KEY = 'annex-panel-width';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 600;

@@ -64,7 +64,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             marginBottom: '8px',
           }}
         >
-          ZettelWeb
+          Annex
         </h1>
         <input
           type="password"

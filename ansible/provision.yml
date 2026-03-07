@@ -1,5 +1,5 @@
 ---
-- name: Provision ZettelWeb VPS
+- name: Provision Annex VPS
   hosts: all
   become: true
   tasks:

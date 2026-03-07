@@ -53,7 +53,7 @@ describe('listNoteFiles', () => {
     await fsp.writeFile(path.join(tmpDir, 'note1.md'), 'content');
     await fsp.writeFile(path.join(tmpDir, 'note2.md'), 'content');
     await fsp.writeFile(path.join(tmpDir, '.hidden.md'), 'content');
-    await fsp.writeFile(path.join(tmpDir, '_zettelweb.json'), '{}');
+    await fsp.writeFile(path.join(tmpDir, '_annex.json'), '{}');
     await fsp.writeFile(path.join(tmpDir, 'temp.syncthing.md'), 'content');
     await fsp.writeFile(path.join(tmpDir, 'note.syncthing-tmp'), 'content');
     await fsp.writeFile(path.join(tmpDir, 'readme.txt'), 'content');
@@ -73,7 +73,7 @@ describe('listNoteFiles', () => {
 
   test('excludes underscore-prefixed files', async () => {
     const files = await listNoteFiles(tmpDir);
-    expect(files).not.toContain('_zettelweb.json');
+    expect(files).not.toContain('_annex.json');
     expect(files).not.toContain('_trash');
   });
 
