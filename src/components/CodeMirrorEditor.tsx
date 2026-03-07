@@ -24,6 +24,7 @@ export default function CodeMirrorEditor({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const isSettingDocRef = useRef(false);
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
@@ -40,8 +41,11 @@ export default function CodeMirrorEditor({
   completionProvidersRef.current = completionProviders;
 
   // Stable callback that delegates to the latest onUpdate ref
+  // Suppressed during programmatic doc swaps to avoid false dirty/save
   const stableOnUpdate = useCallback((content: string) => {
-    onUpdateRef.current(content);
+    if (!isSettingDocRef.current) {
+      onUpdateRef.current(content);
+    }
   }, []);
 
   // Stable callback that delegates to the latest saveNow ref
@@ -108,14 +112,7 @@ export default function CodeMirrorEditor({
     const current = view.state.doc.toString();
     if (current === doc) return;
 
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: doc,
-      },
-      effects: EditorView.scrollIntoView(0),
-    });
+    isSettingDocRef.current = true;
 
     // Reset undo history by replacing the state with fresh extensions
     const newState = EditorState.create({
@@ -126,6 +123,8 @@ export default function CodeMirrorEditor({
       ],
     });
     view.setState(newState);
+
+    isSettingDocRef.current = false;
   }, [doc, buildCallbacks, stableSaveNow]);
 
   return (
