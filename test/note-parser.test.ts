@@ -18,12 +18,16 @@ describe('filenameToId', () => {
     expect(filenameToId('20240115143200 Note.md')).toBe('20240115143200');
   });
 
-  test('returns empty for non-digit filename', () => {
-    expect(filenameToId('My Note.md')).toBe('');
+  test('uses filename stem for non-digit filename', () => {
+    expect(filenameToId('My Note.md')).toBe('My Note');
   });
 
-  test('returns empty for too-short digit prefix', () => {
-    expect(filenameToId('2024 Short.md')).toBe('');
+  test('uses filename stem for too-short digit prefix', () => {
+    expect(filenameToId('2024 Short.md')).toBe('2024 Short');
+  });
+
+  test('uses filename stem for arbitrary prefix', () => {
+    expect(filenameToId('runx some note.md')).toBe('runx some note');
   });
 
   test('truncates digits beyond 14', () => {
@@ -238,9 +242,10 @@ describe('parseNote', () => {
     expect(note.snippet).toBe('Body with #tag and [[link]].');
   });
 
-  test('uses mtime for createdAt when no ID', () => {
+  test('uses mtime for createdAt when no numeric ID', () => {
     const mtime = new Date('2024-06-01T10:00:00Z');
     const note = parseNote('no-id-file.md', '# Test', mtime);
+    expect(note.id).toBe('no-id-file');
     expect(note.createdAt).toBe(mtime.toISOString());
   });
 });

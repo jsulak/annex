@@ -57,8 +57,14 @@ export async function statNoteFile(notesDir: string, filename: string): Promise<
   return { mtime: stat.mtime, mtimeMs: stat.mtimeMs };
 }
 
-/** Find the file in notesDir whose name starts with the given ID. */
+/** Find the file in notesDir matching the given ID (numeric prefix or full filename stem). */
 export async function findFileById(notesDir: string, id: string): Promise<string | null> {
+  if (!id) return null;
   const files = await listNoteFiles(notesDir);
-  return files.find((f) => f.startsWith(id)) ?? null;
+  // Numeric IDs match by prefix; non-numeric IDs match exact filename stem
+  if (/^\d{12,14}$/.test(id)) {
+    return files.find((f) => f.startsWith(id)) ?? null;
+  }
+  const stem = id.replace(/\.md$/i, '');
+  return files.find((f) => f.replace(/\.md$/i, '') === stem) ?? null;
 }

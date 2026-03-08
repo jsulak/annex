@@ -14,10 +14,11 @@ export interface NoteDetail extends NoteIndex {
   etag: string;
 }
 
-/** Extract leading digits from filename as the note ID. */
+/** Extract note ID from filename: leading 12-14 digits if present, otherwise filename without .md. */
 export function filenameToId(filename: string): string {
   const match = filename.match(/^(\d{12,14})/);
-  return match ? match[1] : '';
+  if (match) return match[1];
+  return filename.replace(/\.md$/i, '');
 }
 
 /** Convert a 12- or 14-digit ID to an ISO 8601 date string. */
@@ -85,6 +86,7 @@ export function extractLinks(body: string): string[] {
 /** Parse a note file into a NoteIndex object. */
 export function parseNote(filename: string, body: string, mtime: Date): NoteIndex {
   const id = filenameToId(filename);
+  const createdFromId = idToCreatedAt(id);
   return {
     id,
     filename,
@@ -92,7 +94,7 @@ export function parseNote(filename: string, body: string, mtime: Date): NoteInde
     snippet: extractSnippet(body),
     tags: extractTags(body),
     links: extractLinks(body),
-    createdAt: id ? idToCreatedAt(id) : mtime.toISOString(),
+    createdAt: createdFromId || mtime.toISOString(),
     modifiedAt: mtime.toISOString(),
   };
 }
