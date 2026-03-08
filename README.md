@@ -1,6 +1,8 @@
 # Annex
 
-A single-user, self-hosted Zettelkasten web app — a clone of [The Archive](https://zettelkasten.de/the-archive/). Notes are plain Markdown files on the filesystem with no database. Designed to be accessed from any browser after authenticating with a single password.
+A single-user, self-hosted notes web app — heavily inspired by [The Archive](https://zettelkasten.de/the-archive/). Notes are plain Markdown files on the filesystem with no database. Designed to be accessed from any browser after authenticating with a single password. Uses syncthing in the background to keep notes synced with a local copy on your desktop.
+
+This software is the software I want to use; it is probably not the software that you want to use. 
 
 ## Features
 
