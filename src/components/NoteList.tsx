@@ -12,6 +12,7 @@ export default function NoteList() {
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const clickingRef = useRef(false);
 
   // Show search results when searching, otherwise all notes
   const displayNotes: Array<NoteIndex | SearchResult> = searchResults ?? notes;
@@ -77,6 +78,10 @@ export default function NoteList() {
   );
 
   const handleFocus = useCallback(() => {
+    // Skip auto-select when focus was triggered by a mouse click on a list item —
+    // the item's own onClick will handle selection. Only auto-select when focus
+    // arrives via keyboard (e.g. ArrowDown from search, Tab).
+    if (clickingRef.current) return;
     if (focusIndex === null && displayNotes.length > 0) {
       setFocusIndex(0);
       selectNote(displayNotes[0].id);
@@ -106,6 +111,8 @@ export default function NoteList() {
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
+      onMouseDown={() => { clickingRef.current = true; }}
+      onMouseUp={() => { clickingRef.current = false; }}
       style={{ overflowY: 'auto', flex: 1, outline: 'none' }}
     >
       {displayNotes.map((note, index) => (

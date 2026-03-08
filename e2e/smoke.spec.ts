@@ -60,7 +60,8 @@ test.describe('Smoke tests', () => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // Count notes before
+    // Wait for notes to load before counting
+    await expect(page.locator('#note-list > div').first()).toBeVisible({ timeout: 5_000 });
     const notesBefore = await page.locator('#note-list > div').count();
 
     await page.locator('button[title="New note"]').click();

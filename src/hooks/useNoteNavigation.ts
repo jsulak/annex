@@ -8,6 +8,7 @@ export function useNoteNavigation() {
   const setTagsModalVisible = useStore((s) => s.setTagsModalVisible);
   const toggleBacklinks = useStore((s) => s.toggleBacklinks);
   const setSettingsVisible = useStore((s) => s.setSettingsVisible);
+  const setKeyboardHelpVisible = useStore((s) => s.setKeyboardHelpVisible);
   const selectedId = useStore((s) => s.selectedId);
   const selectedNote = useStore((s) => s.selectedNote);
   const deleteNote = useStore((s) => s.deleteNote);
@@ -71,7 +72,27 @@ export function useNoteNavigation() {
       }
     };
 
+    // ? to show keyboard help (only when not in input/editor)
+    const helpHandler = (e: KeyboardEvent) => {
+      if (e.key !== '?' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const active = document.activeElement;
+      const tag = active?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        (active as HTMLElement)?.closest?.('.cm-editor')
+      ) {
+        return;
+      }
+      e.preventDefault();
+      setKeyboardHelpVisible(true);
+    };
+
     document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, selectedId, selectedNote, deleteNote]);
+    document.addEventListener('keydown', helpHandler);
+    return () => {
+      document.removeEventListener('keydown', handler);
+      document.removeEventListener('keydown', helpHandler);
+    };
+  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, setKeyboardHelpVisible, selectedId, selectedNote, deleteNote]);
 }

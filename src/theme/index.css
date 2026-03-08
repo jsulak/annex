@@ -139,3 +139,40 @@ body {
 .preview-content img {
   max-width: 100%;
 }
+
+/* Responsive: small screens */
+@media (max-width: 768px) {
+  .app-panels {
+    flex-direction: column !important;
+  }
+
+  .app-panel-list {
+    width: 100% !important;
+    flex: 1 !important;
+    flex-shrink: 1 !important;
+    min-height: 0;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+
+  .app-panel-list.hidden-mobile {
+    display: none !important;
+  }
+
+  .app-divider {
+    display: none !important;
+  }
+
+  .app-panel-editor {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .toolbar-nav-buttons {
+    display: none !important;
+  }
+
+  .mobile-back-btn {
+    display: block !important;
+  }
+}
