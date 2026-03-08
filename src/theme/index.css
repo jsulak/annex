@@ -148,9 +148,8 @@ body {
 
   .app-panel-list {
     width: 100% !important;
-    flex: 1 !important;
-    flex-shrink: 1 !important;
-    min-height: 0;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     border-right: none !important;
     border-bottom: none !important;
   }
@@ -164,8 +163,12 @@ body {
   }
 
   .app-panel-editor {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .app-panel-editor:not(.hidden-mobile) ~ .app-panel-list {
+    display: none !important;
   }
 
   .toolbar-nav-buttons {
@@ -174,5 +177,30 @@ body {
 
   .mobile-back-btn {
     display: block !important;
+  }
+
+  /* Better touch targets */
+  .toolbar-btn {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Hide less-essential toolbar buttons on mobile (must come after .toolbar-btn) */
+  .toolbar-help-btn {
+    display: none !important;
+  }
+
+  /* Disable split view on mobile */
+  .view-mode-split {
+    display: none !important;
+  }
+
+  /* Larger touch targets for note list items */
+  #note-list > div {
+    padding: 12px !important;
+    min-height: 44px;
   }
 }

@@ -180,6 +180,7 @@ export default function Toolbar() {
         }}
       />
       <button
+        className="toolbar-btn"
         title="New note"
         onClick={() => createNote()}
         style={{
@@ -196,6 +197,7 @@ export default function Toolbar() {
         +
       </button>
       <button
+        className="toolbar-btn"
         title="Settings (Cmd+,)"
         onClick={() => setSettingsVisible(true)}
         style={{
@@ -212,6 +214,7 @@ export default function Toolbar() {
         &#x2699;
       </button>
       <button
+        className="toolbar-btn toolbar-help-btn"
         title="Keyboard shortcuts (?)"
         onClick={() => setKeyboardHelpVisible(true)}
         style={{
@@ -228,6 +231,7 @@ export default function Toolbar() {
         ?
       </button>
       <button
+        className="toolbar-btn"
         title="Log out"
         onClick={logout}
         style={{

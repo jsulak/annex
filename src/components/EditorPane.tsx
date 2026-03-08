@@ -50,6 +50,7 @@ function ViewModeToggle({
     preview: 'Preview',
     split: 'Split',
   };
+  const splitClass = (m: ViewMode) => m === 'split' ? 'view-mode-split' : '';
 
   return (
     <div
@@ -69,6 +70,7 @@ function ViewModeToggle({
       {modes.map((m) => (
         <button
           key={m}
+          className={splitClass(m)}
           onClick={() => onChange(m)}
           style={{
             fontFamily: 'var(--font-mono)',
