@@ -64,6 +64,11 @@ describe('idToCreatedAt', () => {
   test('returns empty for empty string', () => {
     expect(idToCreatedAt('')).toBe('');
   });
+
+  test('returns empty for non-numeric string', () => {
+    expect(idToCreatedAt('runx Excerpts')).toBe('');
+    expect(idToCreatedAt('runx Quotations')).toBe('');
+  });
 });
 
 describe('extractTitle', () => {
