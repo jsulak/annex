@@ -75,10 +75,9 @@ export function parseQuery(raw: string): ParsedQuery {
     return ' ';
   });
 
-  // Extract #tags
+  // #tags are treated as plain text search terms (strip the # for indexing)
   q = q.replace(/#([a-zA-Z][\w-]*)/g, (_match, tag: string) => {
-    tags.push(tag.toLowerCase());
-    return ' ';
+    return ` ${tag.toLowerCase()} `;
   });
 
   // Remaining words are plain terms

@@ -49,16 +49,15 @@ test.describe('Search — filtering and results', () => {
     await expect(page.getByText('No results found.')).toBeVisible({ timeout: 5_000 });
   });
 
-  test('search by tag filters correctly', async ({ page }) => {
+  test('search by #tag finds notes containing that word', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // #test tag is on Sample Note and Third Note, but not Second Note
+    // #test appears in Sample Note and Third Note body text
     await page.locator('#search-input').fill('#test');
 
     await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible();
-    await expect(page.locator('#note-list').getByText('202401151433 Second Note')).not.toBeVisible();
   });
 
   test('prefix search matches partial words', async ({ page }) => {
@@ -123,19 +122,19 @@ test.describe('Search — clearing and navigation', () => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // #test tag matches Sample Note and Third Note
-    await page.locator('#search-input').fill('#test');
-    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
+    // #second-tag only matches Third Note
+    await page.locator('#search-input').fill('#second-tag');
+    await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible({ timeout: 5_000 });
 
-    // Click on a result
-    await page.locator('#note-list').getByText('202401151432 Sample Note').click();
+    // Click on the result
+    await page.locator('#note-list').getByText('202401151434 Third Note').click();
     await expect(page.locator('.cm-content')).toBeVisible({ timeout: 5_000 });
 
     // The search input should still have the query
-    await expect(page.locator('#search-input')).toHaveValue('#test');
+    await expect(page.locator('#search-input')).toHaveValue('#second-tag');
 
-    // Second Note should still not be in the list (search is active)
-    await expect(page.locator('#note-list').getByText('202401151433 Second Note')).not.toBeVisible();
+    // Sample Note should not be in the list (search is active)
+    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).not.toBeVisible();
   });
 });
 
@@ -201,6 +200,30 @@ test.describe('Search — keyboard shortcuts', () => {
     page.once('dialog', (dialog) => dialog.accept());
     await page.locator('button[title="Delete note"]').click();
     await expect(page.locator('#note-list > div')).toHaveCount(notesBefore, { timeout: 5_000 });
+  });
+});
+
+test.describe('Search — hashtag as text search', () => {
+  test('searching #test finds notes with that tag', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('#search-input').fill('#test');
+
+    // Sample Note and Third Note both have #test in their body
+    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible();
+  });
+
+  test('searching #second-tag finds only the note with that tag', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('#search-input').fill('#second-tag');
+
+    // Only Third Note has #second-tag
+    await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).not.toBeVisible();
   });
 });
 
