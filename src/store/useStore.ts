@@ -41,6 +41,7 @@ interface AppState {
   tagsModalVisible: boolean;
   backlinksVisible: boolean;
   settingsVisible: boolean;
+  keyboardHelpVisible: boolean;
   _navigatingHistory: boolean;
   conflict: ConflictInfo | null;
   hasPendingEdits: boolean;
@@ -74,6 +75,7 @@ interface AppState {
   setBacklinksVisible: (visible: boolean) => void;
   toggleBacklinks: () => void;
   setSettingsVisible: (visible: boolean) => void;
+  setKeyboardHelpVisible: (visible: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -90,6 +92,7 @@ export const useStore = create<AppState>((set, get) => ({
   tagsModalVisible: false,
   backlinksVisible: false,
   settingsVisible: false,
+  keyboardHelpVisible: false,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
@@ -377,4 +380,5 @@ export const useStore = create<AppState>((set, get) => ({
   setBacklinksVisible: (visible: boolean) => set({ backlinksVisible: visible }),
   toggleBacklinks: () => set((s) => ({ backlinksVisible: !s.backlinksVisible })),
   setSettingsVisible: (visible: boolean) => set({ settingsVisible: visible }),
+  setKeyboardHelpVisible: (visible: boolean) => set({ keyboardHelpVisible: visible }),
 }));

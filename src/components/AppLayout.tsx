@@ -8,6 +8,7 @@ import EditorPane from './EditorPane.js';
 import QuickOpen from './QuickOpen.js';
 import TagsModal from './TagsModal.js';
 import SettingsPanel from './SettingsPanel.js';
+import KeyboardHelp from './KeyboardHelp.js';
 
 const STORAGE_KEY = 'annex-panel-width';
 const DEFAULT_WIDTH = 280;
@@ -31,6 +32,8 @@ export default function AppLayout() {
   const quickOpenVisible = useStore((s) => s.quickOpenVisible);
   const tagsModalVisible = useStore((s) => s.tagsModalVisible);
   const settingsVisible = useStore((s) => s.settingsVisible);
+  const keyboardHelpVisible = useStore((s) => s.keyboardHelpVisible);
+  const selectedId = useStore((s) => s.selectedId);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
   useNoteNavigation();
@@ -76,9 +79,10 @@ export default function AppLayout() {
       }}
     >
       <Toolbar />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="app-panels" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left panel — note list */}
         <div
+          className={`app-panel-list${selectedId ? ' hidden-mobile' : ''}`}
           style={{
             width: panelWidth,
             flexShrink: 0,
@@ -93,6 +97,7 @@ export default function AppLayout() {
 
         {/* Resizable divider */}
         <div
+          className="app-divider"
           onMouseDown={onMouseDown}
           style={{
             width: '4px',
@@ -104,6 +109,7 @@ export default function AppLayout() {
 
         {/* Right panel — editor */}
         <div
+          className="app-panel-editor"
           style={{
             flex: 1,
             display: 'flex',
@@ -117,6 +123,7 @@ export default function AppLayout() {
       {quickOpenVisible && <QuickOpen />}
       {tagsModalVisible && <TagsModal />}
       {settingsVisible && <SettingsPanel />}
+      {keyboardHelpVisible && <KeyboardHelp />}
     </div>
   );
 }

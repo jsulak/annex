@@ -15,6 +15,7 @@ export default function Toolbar() {
   const canGoBack = useStore((s) => s.canGoBack());
   const canGoForward = useStore((s) => s.canGoForward());
   const setSettingsVisible = useStore((s) => s.setSettingsVisible);
+  const setKeyboardHelpVisible = useStore((s) => s.setKeyboardHelpVisible);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,42 +121,44 @@ export default function Toolbar() {
         background: 'var(--bg-app)',
       }}
     >
-      <button
-        title="Back (Cmd+[)"
-        disabled={!canGoBack}
-        onClick={goBack}
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '14px',
-          padding: '4px 8px',
-          border: '1px solid var(--border)',
-          borderRadius: '2px',
-          background: 'var(--bg-app)',
-          color: canGoBack ? 'var(--text-primary)' : 'var(--text-secondary)',
-          cursor: canGoBack ? 'pointer' : 'default',
-          opacity: canGoBack ? 1 : 0.4,
-        }}
-      >
-        &#x25C0;
-      </button>
-      <button
-        title="Forward (Cmd+])"
-        disabled={!canGoForward}
-        onClick={goForward}
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: '14px',
-          padding: '4px 8px',
-          border: '1px solid var(--border)',
-          borderRadius: '2px',
-          background: 'var(--bg-app)',
-          color: canGoForward ? 'var(--text-primary)' : 'var(--text-secondary)',
-          cursor: canGoForward ? 'pointer' : 'default',
-          opacity: canGoForward ? 1 : 0.4,
-        }}
-      >
-        &#x25B6;
-      </button>
+      <span className="toolbar-nav-buttons" style={{ display: 'contents' }}>
+        <button
+          title="Back (Cmd+[)"
+          disabled={!canGoBack}
+          onClick={goBack}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '14px',
+            padding: '4px 8px',
+            border: '1px solid var(--border)',
+            borderRadius: '2px',
+            background: 'var(--bg-app)',
+            color: canGoBack ? 'var(--text-primary)' : 'var(--text-secondary)',
+            cursor: canGoBack ? 'pointer' : 'default',
+            opacity: canGoBack ? 1 : 0.4,
+          }}
+        >
+          &#x25C0;
+        </button>
+        <button
+          title="Forward (Cmd+])"
+          disabled={!canGoForward}
+          onClick={goForward}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '14px',
+            padding: '4px 8px',
+            border: '1px solid var(--border)',
+            borderRadius: '2px',
+            background: 'var(--bg-app)',
+            color: canGoForward ? 'var(--text-primary)' : 'var(--text-secondary)',
+            cursor: canGoForward ? 'pointer' : 'default',
+            opacity: canGoForward ? 1 : 0.4,
+          }}
+        >
+          &#x25B6;
+        </button>
+      </span>
       <input
         id="search-input"
         ref={inputRef}
@@ -207,6 +210,22 @@ export default function Toolbar() {
         }}
       >
         &#x2699;
+      </button>
+      <button
+        title="Keyboard shortcuts (?)"
+        onClick={() => setKeyboardHelpVisible(true)}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '14px',
+          padding: '4px 10px',
+          border: '1px solid var(--border)',
+          borderRadius: '2px',
+          background: 'var(--bg-app)',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+        }}
+      >
+        ?
       </button>
       <button
         title="Log out"

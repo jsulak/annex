@@ -90,6 +90,7 @@ function ViewModeToggle({
 export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
   const selectedId = useStore((s) => s.selectedId);
+  const deselectNote = useStore((s) => s.deselectNote);
   const deleteNote = useStore((s) => s.deleteNote);
   const notes = useStore((s) => s.notes);
   const selectNote = useStore((s) => s.selectNote);
@@ -234,6 +235,27 @@ export default function EditorPane() {
         position: 'relative',
       }}
     >
+      <button
+        className="mobile-back-btn"
+        onClick={deselectNote}
+        style={{
+          display: 'none',
+          position: 'absolute',
+          top: 6,
+          left: 12,
+          zIndex: 10,
+          fontFamily: 'var(--font-mono)',
+          fontSize: '12px',
+          padding: '2px 8px',
+          border: '1px solid var(--border)',
+          borderRadius: '2px',
+          background: 'var(--bg-app)',
+          color: 'var(--text-secondary)',
+          cursor: 'pointer',
+        }}
+      >
+        &#x25C0; List
+      </button>
       <ViewModeToggle mode={viewMode} onChange={setViewMode} />
       {viewMode !== 'preview' && <SaveIndicator status={saveStatus} />}
       <button
