@@ -63,6 +63,7 @@ npm run setup
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
+- [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)
 - [ ] Polish (keyboard help overlay, error states, responsive layout)
 
 ## Testing

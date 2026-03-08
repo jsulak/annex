@@ -56,6 +56,18 @@ resource "digitalocean_firewall" "annex" {
     source_addresses = ["0.0.0.0/0", "::/0"]
   }
 
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "22000"
+    source_addresses = ["0.0.0.0/0", "::/0"]
+  }
+
+  inbound_rule {
+    protocol         = "udp"
+    port_range       = "21027"
+    source_addresses = ["0.0.0.0/0", "::/0"]
+  }
+
   outbound_rule {
     protocol              = "tcp"
     port_range            = "1-65535"

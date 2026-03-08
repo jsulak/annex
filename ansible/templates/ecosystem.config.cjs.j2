@@ -10,6 +10,9 @@ module.exports = {
         PORT: '{{ app_port }}',
         NOTES_DIR: '{{ notes_dir }}',
         SESSION_SECRET: '{{ session_secret }}',
+{% if syncthing_api_key.stdout is defined and syncthing_api_key.stdout %}
+        SYNCTHING_API_KEY: '{{ syncthing_api_key.stdout }}',
+{% endif %}
       },
       restart_delay: 3000,
       max_restarts: 10,

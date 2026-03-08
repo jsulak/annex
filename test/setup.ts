@@ -11,6 +11,7 @@ import { registerSearch } from '../server/routes/search.js';
 import { registerTags } from '../server/routes/tags.js';
 import { registerEvents } from '../server/routes/events.js';
 import { registerConfig } from '../server/routes/config.js';
+import { registerSync } from '../server/routes/sync.js';
 import { buildIndex } from '../server/lib/searchIndex.js';
 import { startWatcher, stopWatcher } from '../server/lib/watcher.js';
 
@@ -71,6 +72,7 @@ export async function startTestServer(): Promise<TestContext> {
   await registerTags(app, notesDir);
   await registerEvents(app);
   await registerConfig(app);
+  await registerSync(app, '', notesDir);
 
   app.get('/api/v1/health', async () => ({ status: 'ok' }));
 
