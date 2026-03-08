@@ -23,7 +23,7 @@ export function filenameToId(filename: string): string {
 
 /** Convert a 12- or 14-digit ID to an ISO 8601 date string. */
 export function idToCreatedAt(id: string): string {
-  if (id.length < 12) return '';
+  if (!/^\d{12,14}$/.test(id)) return '';
   const year = id.slice(0, 4);
   const month = id.slice(4, 6);
   const day = id.slice(6, 8);
