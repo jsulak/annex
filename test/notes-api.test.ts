@@ -207,6 +207,31 @@ describe('POST /notes/:id/rename', () => {
   });
 });
 
+describe('non-numeric ID notes', () => {
+  test('note list includes non-numeric filename notes', async () => {
+    const notes = await (await http.get('/api/v1/notes')).json();
+    const runx = notes.find((n: { filename: string }) => n.filename === 'runx Test Note.md');
+    expect(runx).toBeDefined();
+    expect(runx.id).toBe('runx Test Note');
+  });
+
+  test('GET by non-numeric ID returns note', async () => {
+    const res = await http.get(`/api/v1/notes/${encodeURIComponent('runx Test Note')}`);
+    expect(res.ok).toBe(true);
+    const note = await res.json();
+    expect(note.id).toBe('runx Test Note');
+    expect(note.body).toContain('Unique Seed Heading');
+  });
+
+  test('non-numeric note uses mtime for createdAt', async () => {
+    const notes = await (await http.get('/api/v1/notes')).json();
+    const runx = notes.find((n: { id: string }) => n.id === 'runx Test Note');
+    expect(runx).toBeDefined();
+    // Should be a valid ISO date (from mtime), not empty or garbage
+    expect(new Date(runx.createdAt).getTime()).not.toBeNaN();
+  });
+});
+
 describe('note list count consistency', () => {
   test('count correct after create/delete cycle', async () => {
     const before = await (await http.get('/api/v1/notes')).json();

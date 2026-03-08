@@ -140,6 +140,13 @@ describe('search behavior', () => {
     await http.delete(`/api/v1/notes/${id}`);
   });
 
+  test('search finds notes by filename when term is not in title or body', async () => {
+    // The seed note "runx Test Note.md" has title "Runx Heading" (from # heading).
+    // Searching "runx" should find it via the indexed filename.
+    const results = await (await http.get('/api/v1/search?q=runx')).json();
+    expect(results.some((r: { filename: string }) => r.filename === 'runx Test Note.md')).toBe(true);
+  });
+
   test('search results sorted by modifiedAt descending', async () => {
     const id1 = nextId();
     const id2 = nextId();
