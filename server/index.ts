@@ -12,6 +12,7 @@ import { registerSearch } from './routes/search.js';
 import { registerTags } from './routes/tags.js';
 import { registerEvents } from './routes/events.js';
 import { registerConfig } from './routes/config.js';
+import { registerSync } from './routes/sync.js';
 import { buildIndex } from './lib/searchIndex.js';
 import { startWatcher } from './lib/watcher.js';
 
@@ -31,6 +32,7 @@ function requireEnv(name: string, minLength = 1): string {
 const NOTES_DIR = requireEnv('NOTES_DIR');
 const SESSION_SECRET = requireEnv('SESSION_SECRET', 32);
 
+const SYNCTHING_API_KEY = process.env.SYNCTHING_API_KEY || '';
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const SESSION_MAX_AGE_DAYS = parseInt(process.env.SESSION_MAX_AGE_DAYS || '30', 10);
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -88,6 +90,9 @@ async function start() {
 
   // Config API
   await registerConfig(app);
+
+  // Sync (Syncthing) API
+  await registerSync(app, SYNCTHING_API_KEY, resolvedNotesDir);
 
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);

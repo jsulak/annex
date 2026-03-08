@@ -41,6 +41,13 @@
           - "--exclude=e2e"
           - "--exclude=src"
 
+    - name: Extract Syncthing API key
+      ansible.builtin.shell: >
+        grep -oP '<apikey>\K[^<]+' /home/{{ app_user }}/.local/state/syncthing/config.xml
+      register: syncthing_api_key
+      changed_when: false
+      failed_when: false
+
     - name: Template PM2 ecosystem config
       ansible.builtin.template:
         src: templates/ecosystem.config.cjs.j2

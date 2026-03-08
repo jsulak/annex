@@ -104,6 +104,35 @@ test/             # Backend API tests (vitest)
 e2e/              # End-to-end tests (Playwright)
 ```
 
+## Setting Up Syncing
+
+After deploying, open **Settings** (gear icon or `Cmd+,`) and scroll to the **Sync (Syncthing)** section.
+
+### One-time setup
+
+1. On your Mac, install Syncthing:
+   ```bash
+   brew install syncthing
+   brew services start syncthing
+   ```
+2. Open http://localhost:8384 to access the Syncthing GUI on your Mac.
+3. In **Annex Settings**, copy the server's Device ID (click "Copy").
+4. In the **Mac Syncthing GUI**, go to *Add Remote Device* and paste the server's Device ID.
+5. In the **Mac Syncthing GUI**, find your Mac's Device ID under *Actions > Show ID*.
+6. Back in **Annex Settings**, paste your Mac's Device ID and click **Pair device**. This adds the Mac as a trusted device and shares the notes folder automatically.
+7. In the **Mac Syncthing GUI**, accept the incoming folder share when prompted. Set the local path to your notes folder (e.g., `~/Documents/Zettelkasten`).
+
+### After pairing
+
+- The connection status dot in Settings shows **green** when connected, **yellow** when paired but not currently connected.
+- Syncthing runs in the background — changes sync within 1-2 seconds.
+- iCloud syncs from your Mac to iPhone/iPad as before.
+
+### If Syncthing isn't provisioned
+
+The Sync section will show "Syncthing is not configured on this server." Run `make provision` (or `FIRST_RUN=1 make provision` for a new droplet) to install Syncthing on the VPS first.
+
+
 ## Documentation
 
 - [SPEC.md](SPEC.md) — full application specification
