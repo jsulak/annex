@@ -47,7 +47,7 @@ export async function buildIndex(notesDir: string): Promise<number> {
 /** Add or update a single note in the index. */
 export function addToIndex(note: StoredNote): void {
   noteStore.set(note.id, note);
-  flexIndex.update(note.id, `${note.title} ${note.body}`);
+  flexIndex.update(note.id, `${note.filename} ${note.title} ${note.body}`);
 }
 
 /** Remove a note from the index. */
