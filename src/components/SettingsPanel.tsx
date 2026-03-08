@@ -246,6 +246,7 @@ export default function SettingsPanel() {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '480px',
+          maxWidth: 'calc(100vw - 24px)',
           maxHeight: '80vh',
           overflowY: 'auto',
           background: 'var(--bg-editor)',

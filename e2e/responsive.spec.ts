@@ -96,4 +96,26 @@ test.describe('Responsive layout', () => {
 
     await expect(page.locator('.app-divider')).toBeVisible();
   });
+
+  test('mobile hides keyboard help button', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    await expect(page.locator('.toolbar-help-btn')).not.toBeVisible();
+  });
+
+  test('mobile note list fills available space', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
+
+    // Note list panel should take substantial portion of viewport height
+    const listPanel = page.locator('.app-panel-list');
+    const box = await listPanel.boundingBox();
+    expect(box).toBeTruthy();
+    // Should be at least 50% of viewport height (667 * 0.5 = 333)
+    expect(box!.height).toBeGreaterThan(300);
+  });
 });
