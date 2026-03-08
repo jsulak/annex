@@ -20,6 +20,9 @@ export DOMAIN=""
 # Deploy the app:
 #   ./deploy.sh deploy
 #
+# Set/reset the login password:
+#   ./deploy.sh setup
+#
 # Full teardown and rebuild:
 #   ./deploy.sh destroy
 #   ./deploy.sh init
@@ -42,8 +45,11 @@ case "${1:-}" in
   destroy)
     make infra-destroy
     ;;
+  setup)
+    make setup
+    ;;
   *)
-    echo "Usage: $0 {init|provision|deploy|destroy}"
+    echo "Usage: $0 {init|provision|deploy|setup|destroy}"
     exit 1
     ;;
 esac
