@@ -17,8 +17,11 @@ export DOMAIN=""
 # Re-provision existing droplet (e.g. update Caddy config):
 #   ./deploy.sh provision
 #
-# Deploy the app:
+# Deploy the app (full — includes npm ci, PM2 config):
 #   ./deploy.sh deploy
+#
+# Quick push (code-only — build, rsync, restart):
+#   ./deploy.sh push
 #
 # Set/reset the login password:
 #   ./deploy.sh setup
@@ -42,6 +45,9 @@ case "${1:-}" in
   deploy)
     make deploy
     ;;
+  push)
+    make push
+    ;;
   destroy)
     make infra-destroy
     ;;
@@ -49,7 +55,7 @@ case "${1:-}" in
     make setup
     ;;
   *)
-    echo "Usage: $0 {init|provision|deploy|setup|destroy}"
+    echo "Usage: $0 {init|provision|deploy|push|setup|destroy}"
     exit 1
     ;;
 esac

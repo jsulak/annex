@@ -7,7 +7,7 @@ EXTRA_VARS := $(if $(DOMAIN),-e "domain=$(DOMAIN)",)
 # Get the droplet IP from Terraform
 IP := $(shell cd $(TERRAFORM_DIR) && terraform output -raw droplet_ip 2>/dev/null)
 
-.PHONY: infra-init infra-plan infra-apply infra-destroy provision deploy setup wait-for-ssh
+.PHONY: infra-init infra-plan infra-apply infra-destroy provision deploy push setup wait-for-ssh
 
 ## Terraform — expects DIGITALOCEAN_TOKEN env var
 infra-init:
@@ -51,6 +51,19 @@ deploy:
 	@test -n "$(SESSION_SECRET)" || (echo "Error: SESSION_SECRET env var is required." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
 	cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) -e "session_secret=$(SESSION_SECRET)"
+
+# Quick code push — build locally, rsync, restart. Skips npm ci and PM2 config templating.
+push:
+	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
+	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
+	npm run build
+	rsync -az --delete \
+		--exclude=node_modules --exclude=.git --exclude=.env \
+		--exclude=ansible --exclude=terraform --exclude=test \
+		--exclude=e2e --exclude=src \
+		-e "ssh -i $$HOME/.ssh/$(TF_VAR_ssh_key_name)" \
+		./ $(APP_USER)@$(IP):/opt/annex/
+	ssh -i ~/.ssh/$(TF_VAR_ssh_key_name) $(APP_USER)@$(IP) "cd /opt/annex && pm2 restart ecosystem.config.cjs"
 
 # Set the app password (interactive, first time only).
 setup:
