@@ -202,6 +202,14 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
 
     const note = parseNote(targetFilename, body, mtime);
     const detail: NoteDetail = { ...note, body, etag };
+
+    // Update search index: remove old entry (if ID changed) and add new
+    const oldNote = parseNote(oldFilename, body, mtime);
+    if (oldNote.id !== note.id) {
+      removeFromIndex(oldNote.id);
+    }
+    addToIndex({ ...note, body });
+
     return detail;
   });
 }
