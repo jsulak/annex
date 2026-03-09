@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useAutoSave } from '../hooks/useAutoSave.js';
 import type { SaveStatus } from '../hooks/useAutoSave.js';
@@ -93,7 +93,6 @@ export default function EditorPane() {
   const selectedNote = useStore((s) => s.selectedNote);
   const selectedId = useStore((s) => s.selectedId);
   const deselectNote = useStore((s) => s.deselectNote);
-  const deleteNote = useStore((s) => s.deleteNote);
   const notes = useStore((s) => s.notes);
   const selectNote = useStore((s) => s.selectNote);
   const searchFn = useStore((s) => s.search);
@@ -102,7 +101,7 @@ export default function EditorPane() {
   // Track live content for preview in split mode
   const [liveContent, setLiveContent] = useState<string>('');
 
-  const { handleChange: autoSaveChange, saveNow, cancelPending, saveStatus } = useAutoSave(
+  const { handleChange: autoSaveChange, saveNow, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
   );
@@ -116,10 +115,23 @@ export default function EditorPane() {
     [autoSaveChange],
   );
 
-  // Sync liveContent when note loads
+  // Track the body we've synced to avoid resetting on etag-only updates
+  const syncedBodyRef = useRef<string | null>(null);
+  const loadedNoteIdRef = useRef<string | null>(null);
+
+  // Sync liveContent only on note switch or external body change (conflict resolution, SSE)
   useEffect(() => {
     if (selectedNote) {
-      setLiveContent(selectedNote.body);
+      if (selectedNote.id !== loadedNoteIdRef.current) {
+        // Different note selected — always sync
+        setLiveContent(selectedNote.body);
+        syncedBodyRef.current = selectedNote.body;
+        loadedNoteIdRef.current = selectedNote.id;
+      } else if (selectedNote.body !== syncedBodyRef.current) {
+        // Same note, but body changed externally (conflict resolution, SSE reload)
+        setLiveContent(selectedNote.body);
+        syncedBodyRef.current = selectedNote.body;
+      }
     }
   }, [selectedNote]);
 
@@ -152,7 +164,7 @@ export default function EditorPane() {
   const completionProviders: CompletionProviders = useMemo(
     () => ({
       getNotes: () =>
-        useStore.getState().notes.map((n) => ({ id: n.id, title: n.title })),
+        useStore.getState().notes.map((n) => ({ id: n.id, title: n.title, filename: n.filename })),
       getTags: () => {
         const tagSet = new Set<string>();
         for (const n of useStore.getState().notes) {
@@ -163,14 +175,6 @@ export default function EditorPane() {
     }),
     [],
   );
-
-  const handleDelete = useCallback(async () => {
-    if (!selectedId || !selectedNote) return;
-    const title = selectedNote.title || selectedNote.filename;
-    if (!window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) return;
-    cancelPending();
-    await deleteNote(selectedId);
-  }, [selectedId, selectedNote, deleteNote, cancelPending]);
 
   // Cmd+M / Ctrl+M — cycle view mode
   useEffect(() => {
@@ -225,7 +229,7 @@ export default function EditorPane() {
     );
   }
 
-  const previewBody = viewMode === 'preview' ? selectedNote.body : liveContent;
+  const previewBody = liveContent;
 
   return (
     <div
@@ -260,26 +264,6 @@ export default function EditorPane() {
       </button>
       <ViewModeToggle mode={viewMode} onChange={setViewMode} />
       {viewMode !== 'preview' && <SaveIndicator status={saveStatus} />}
-      <button
-        title="Delete note"
-        onClick={handleDelete}
-        style={{
-          position: 'absolute',
-          top: 6,
-          right: 12,
-          zIndex: 10,
-          fontFamily: 'var(--font-mono)',
-          fontSize: '12px',
-          padding: '2px 8px',
-          border: '1px solid var(--border)',
-          borderRadius: '2px',
-          background: 'var(--bg-app)',
-          color: 'var(--text-secondary)',
-          cursor: 'pointer',
-        }}
-      >
-        Delete
-      </button>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, paddingTop: 28 }}>
         {/* Editor pane */}
@@ -293,7 +277,7 @@ export default function EditorPane() {
             }}
           >
             <CodeMirrorEditor
-              doc={selectedNote.body}
+              doc={liveContent}
               onUpdate={handleChange}
               saveNow={saveNow}
               onNavigate={handleNavigate}
@@ -308,6 +292,7 @@ export default function EditorPane() {
           <div style={{ flex: 1, display: 'flex', minWidth: 0, overflow: 'auto' }}>
             <Preview
               body={previewBody}
+              filename={selectedNote?.filename}
               onNavigate={handleNavigate}
               onSearchTag={handleSearchTag}
             />

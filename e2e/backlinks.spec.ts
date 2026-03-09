@@ -59,6 +59,10 @@ test.describe('Backlinks panel', () => {
 
   test('note with no backlinks shows empty state', async ({ page }) => {
     await page.locator('button[title="New note"]').click();
+    const titleInput = page.locator('input[placeholder="Note title..."]');
+    await expect(titleInput).toBeVisible({ timeout: 5_000 });
+    await titleInput.fill('Isolated orphan note');
+    await page.locator('button:has-text("Create")').click();
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
 
     const header = page.getByText(/Backlinks \(.*\)/);

@@ -9,6 +9,7 @@ export function useNoteNavigation() {
   const toggleBacklinks = useStore((s) => s.toggleBacklinks);
   const setSettingsVisible = useStore((s) => s.setSettingsVisible);
   const setKeyboardHelpVisible = useStore((s) => s.setKeyboardHelpVisible);
+  const setNewNoteDialogVisible = useStore((s) => s.setNewNoteDialogVisible);
   const selectedId = useStore((s) => s.selectedId);
   const selectedNote = useStore((s) => s.selectedNote);
   const deleteNote = useStore((s) => s.deleteNote);
@@ -26,6 +27,13 @@ export function useNoteNavigation() {
         if (window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) {
           deleteNote(selectedId);
         }
+        return;
+      }
+
+      // Cmd+N — new note
+      if (e.key === 'n' && !e.shiftKey) {
+        e.preventDefault();
+        setNewNoteDialogVisible(true);
         return;
       }
 
@@ -94,5 +102,5 @@ export function useNoteNavigation() {
       document.removeEventListener('keydown', handler);
       document.removeEventListener('keydown', helpHandler);
     };
-  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, setKeyboardHelpVisible, selectedId, selectedNote, deleteNote]);
+  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, setKeyboardHelpVisible, setNewNoteDialogVisible, selectedId, selectedNote, deleteNote]);
 }

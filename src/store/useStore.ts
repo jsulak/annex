@@ -76,6 +76,8 @@ interface AppState {
   toggleBacklinks: () => void;
   setSettingsVisible: (visible: boolean) => void;
   setKeyboardHelpVisible: (visible: boolean) => void;
+  newNoteDialogVisible: boolean;
+  setNewNoteDialogVisible: (visible: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -93,6 +95,7 @@ export const useStore = create<AppState>((set, get) => ({
   backlinksVisible: false,
   settingsVisible: false,
   keyboardHelpVisible: false,
+  newNoteDialogVisible: false,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
@@ -139,6 +142,8 @@ export const useStore = create<AppState>((set, get) => ({
         const note: NoteDetail = await res.json();
         const { _navigatingHistory, history, historyIndex } = get();
         if (_navigatingHistory) {
+          // Browser history was already updated by popstate handler — just replace state
+          window.history.replaceState({ noteId: id }, '', `/note/${id}`);
           set({ selectedNote: note, _navigatingHistory: false });
         } else {
           // Skip push if already at this ID
@@ -153,6 +158,8 @@ export const useStore = create<AppState>((set, get) => ({
               historyIndex: newHistory.length - 1,
             });
           }
+          // Push to browser history
+          window.history.pushState({ noteId: id }, '', `/note/${id}`);
         }
       }
     } catch {
@@ -160,7 +167,12 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  deselectNote: () => set({ selectedId: null, selectedNote: null }),
+  deselectNote: () => {
+    set({ selectedId: null, selectedNote: null });
+    if (window.location.pathname !== '/') {
+      window.history.pushState(null, '', '/');
+    }
+  },
 
   updateEtag: (etag: string) =>
     set((s) => ({
@@ -173,15 +185,18 @@ export const useStore = create<AppState>((set, get) => ({
       if (idx < 0) return s;
       const notes = [...s.notes];
       notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links };
+      // Re-sort by last modified so edited note moves to top
+      notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
       return { notes };
     }),
 
   createNote: async (title?: string) => {
     const id = generateId();
-    const body = title ? `# ${title}\n\n` : '';
+    const body = title ? `# ${title}\n\n\n\n---\nBacklinks:\n` : '';
+    const filename = title ? `${id} ${title}.md` : undefined;
     const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, filename }),
     });
 
     if (res.ok) {
@@ -381,4 +396,5 @@ export const useStore = create<AppState>((set, get) => ({
   toggleBacklinks: () => set((s) => ({ backlinksVisible: !s.backlinksVisible })),
   setSettingsVisible: (visible: boolean) => set({ settingsVisible: visible }),
   setKeyboardHelpVisible: (visible: boolean) => set({ keyboardHelpVisible: visible }),
+  setNewNoteDialogVisible: (visible: boolean) => set({ newNoteDialogVisible: visible }),
 }));

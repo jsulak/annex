@@ -39,7 +39,12 @@ test.describe('Tags modal', () => {
     await page.keyboard.press('Meta+Shift+k');
     const input = page.getByPlaceholder('Filter tags...');
 
+    // Wait for tags to load before filtering
+    await expect(page.getByText('#test')).toBeVisible({ timeout: 5_000 });
+
     await input.fill('test');
+    // Wait for filtered results to appear
+    await expect(page.getByText('#test')).toBeVisible({ timeout: 3_000 });
     await page.keyboard.press('Enter');
 
     // Modal should close

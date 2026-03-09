@@ -66,6 +66,12 @@ test.describe('Smoke tests', () => {
 
     await page.locator('button[title="New note"]').click();
 
+    // Title dialog should appear
+    const titleInput = page.locator('input[placeholder="Note title..."]');
+    await expect(titleInput).toBeVisible({ timeout: 5_000 });
+    await titleInput.fill('Test New Note');
+    await page.locator('button:has-text("Create")').click();
+
     // Editor should be visible for the new note
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
 
@@ -120,24 +126,23 @@ test.describe('Smoke tests', () => {
     await expect(page.locator('#note-list').getByText('202401151433 Second Note')).toBeVisible();
   });
 
-  test('delete note removes it from list', async ({ page }) => {
+  test('delete note removes it from list', async ({ page, request }) => {
+    // Create a throwaway note via API
+    const id = '209901050000';
+    await request.put(`/api/v1/notes/${id}`, { data: { body: '# Throwaway For Delete' } });
+
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // Create a note to delete (so we don't remove seed notes needed by other tests)
-    await page.locator('button[title="New note"]').click();
-    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
-
-    // Type something to identify it
-    await page.locator('.cm-content').click();
-    await page.keyboard.type('Delete me note');
-    await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 });
+    const noteItem = page.locator('#note-list > div').filter({ hasText: id }).first();
+    await expect(noteItem).toBeVisible({ timeout: 5_000 });
 
     const notesBefore = await page.locator('#note-list > div').count();
 
-    // Delete it
+    // Delete via right-click context menu
+    await noteItem.click({ button: 'right' });
     page.once('dialog', (dialog) => dialog.accept());
-    await page.locator('button[title="Delete note"]').click();
+    await page.locator('[data-testid="context-menu"]').getByText('Delete').click();
 
     // Should have one fewer note
     await expect(page.locator('#note-list > div')).toHaveCount(notesBefore - 1, { timeout: 5_000 });

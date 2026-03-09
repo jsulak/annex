@@ -45,11 +45,24 @@ test.describe('Error states', () => {
 
     // Should show error indicator
     await expect(page.getByText('Save failed')).toBeVisible({ timeout: 10_000 });
+
+    // Clean up route interception so subsequent serial tests are not affected
+    await page.unroute('**/api/v1/notes/**');
   });
 
   test('login page shows error for wrong password', async ({ browser }) => {
     const context = await browser.newContext({ storageState: undefined });
     const page = await context.newPage();
+
+    // Intercept login to simulate wrong password without consuming rate limit
+    await page.route('**/api/v1/auth/login', (route) => {
+      return route.fulfill({
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+        body: '{"error":"Incorrect password"}',
+      });
+    });
+
     await page.goto('/');
 
     await page.locator('input[type="password"]').fill('wrongpassword');
@@ -83,21 +96,31 @@ test.describe('Error states', () => {
     await context.close();
   });
 
-  test('delete confirmation dialog prevents accidental deletion', async ({ page }) => {
-    // Create a temporary note
-    await page.locator('button[title="New note"]').click();
-    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
-    await page.locator('.cm-content').click();
-    await page.keyboard.type('Test note for delete confirm');
-    await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 });
+  test('delete confirmation dialog prevents accidental deletion', async ({ page, request }) => {
+    // Create a temporary note via API to avoid UI state interference
+    const id = '209901080000';
+    await request.put(`/api/v1/notes/${id}`, {
+      data: { body: 'Delete confirm test body' },
+    });
+
+    // Fresh navigation to pick up the new note
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#note-list > div').first()).toBeVisible({ timeout: 5_000 });
 
     const countBefore = await page.locator('#note-list > div').count();
 
-    // Decline the confirmation dialog
+    // Right-click and try to delete, but decline the confirmation
+    const noteItem = page.locator('#note-list > div').filter({ hasText: id }).first();
+    await expect(noteItem).toBeVisible({ timeout: 5_000 });
+    await noteItem.click({ button: 'right' });
     page.once('dialog', (dialog) => dialog.dismiss());
-    await page.locator('button[title="Delete note"]').click();
+    await page.locator('[data-testid="context-menu"]').getByText('Delete').click();
 
     // Note should still be there
     await expect(page.locator('#note-list > div')).toHaveCount(countBefore);
+
+    // Cleanup
+    await request.delete(`/api/v1/notes/${id}`);
   });
 });

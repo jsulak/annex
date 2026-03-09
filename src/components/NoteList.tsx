@@ -1,6 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useStore } from '../store/useStore.js';
+import { apiFetch } from '../api/client.js';
 import type { NoteIndex, SearchResult } from '../types.js';
+import ContextMenu from './ContextMenu.js';
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  noteId: string;
+  noteFilename: string;
+}
 
 export default function NoteList() {
   const notes = useStore((s) => s.notes);
@@ -8,8 +17,13 @@ export default function NoteList() {
   const searchLoading = useStore((s) => s.searchLoading);
   const selectedId = useStore((s) => s.selectedId);
   const selectNote = useStore((s) => s.selectNote);
+  const deleteNote = useStore((s) => s.deleteNote);
   const loading = useStore((s) => s.loading);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [renaming, setRenaming] = useState<{ noteId: string; filename: string } | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const clickingRef = useRef(false);
@@ -33,6 +47,14 @@ export default function NoteList() {
       }
     }
   }, [selectedId, displayNotes]);
+
+  // Focus rename input when it appears
+  useEffect(() => {
+    if (renaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renaming]);
 
   const scrollIntoView = useCallback((index: number) => {
     const el = itemRefs.current.get(index);
@@ -88,6 +110,66 @@ export default function NoteList() {
     }
   }, [focusIndex, displayNotes, selectNote]);
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, note: NoteIndex | SearchResult) => {
+      e.preventDefault();
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        noteId: note.id,
+        noteFilename: note.filename,
+      });
+    },
+    [],
+  );
+
+  const handleRename = useCallback(async () => {
+    if (!renaming || !renameValue.trim()) {
+      setRenaming(null);
+      return;
+    }
+
+    let newFilename = renameValue.trim();
+    if (!newFilename.endsWith('.md')) {
+      newFilename += '.md';
+    }
+
+    if (newFilename === renaming.filename) {
+      setRenaming(null);
+      return;
+    }
+
+    try {
+      const res = await apiFetch(
+        `/api/v1/notes/${encodeURIComponent(renaming.noteId)}/rename`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ newFilename }),
+        },
+      );
+      if (res.ok) {
+        // Refresh notes list to get the updated filename
+        await useStore.getState().fetchNotes();
+        // Re-select the note to refresh its data
+        if (useStore.getState().selectedId === renaming.noteId) {
+          await useStore.getState().selectNote(renaming.noteId);
+        }
+      }
+    } catch {
+      // Ignore errors
+    }
+    setRenaming(null);
+  }, [renaming, renameValue]);
+
+  const handleDelete = useCallback(
+    async (noteId: string, noteFilename: string) => {
+      const title = noteFilename.replace(/\.md$/i, '');
+      if (!window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) return;
+      await deleteNote(noteId);
+    },
+    [deleteNote],
+  );
+
   if (loading || searchLoading) {
     return (
       <div style={{ padding: '16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
@@ -126,6 +208,7 @@ export default function NoteList() {
             selectNote(note.id);
             setFocusIndex(index);
           }}
+          onContextMenu={(e) => handleContextMenu(e, note)}
           style={{
             padding: '8px 12px',
             cursor: 'pointer',
@@ -141,20 +224,76 @@ export default function NoteList() {
             outlineOffset: '-1px',
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
-              color: 'var(--text-primary)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {note.filename.replace(/\.md$/i, '')}
-          </span>
+          {renaming && renaming.noteId === note.id ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleRename();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setRenaming(null);
+                }
+                e.stopPropagation();
+              }}
+              onBlur={handleRename}
+              style={{
+                width: '100%',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+                padding: '2px 4px',
+                border: '1px solid var(--text-accent)',
+                borderRadius: '2px',
+                background: 'var(--bg-editor)',
+                color: 'var(--text-primary)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          ) : (
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '13px',
+                color: 'var(--text-primary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {note.filename.replace(/\.md$/i, '')}
+            </span>
+          )}
         </div>
       ))}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            {
+              label: 'Rename',
+              onClick: () => {
+                setRenaming({
+                  noteId: contextMenu.noteId,
+                  noteFilename: contextMenu.noteFilename,
+                });
+                setRenameValue(contextMenu.noteFilename.replace(/\.md$/i, ''));
+              },
+            },
+            {
+              label: 'Delete',
+              danger: true,
+              onClick: () => handleDelete(contextMenu.noteId, contextMenu.noteFilename),
+            },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }

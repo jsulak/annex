@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 
 interface Props {
   body: string;
+  filename?: string;
   onNavigate: (target: string) => void;
   onSearchTag: (tag: string) => void;
 }
@@ -40,16 +41,37 @@ function postprocessHtml(html: string): string {
   );
 }
 
-function renderMarkdown(body: string): string {
+function renderMarkdown(body: string, filename?: string): string {
   const preprocessed = preprocessMarkdown(body);
   const rawHtml = marked.parse(preprocessed) as string;
   const clean = DOMPurify.sanitize(rawHtml, {
     ADD_ATTR: ['data-wikilink', 'data-tag', 'target'],
   });
-  return postprocessHtml(clean);
+  let html = postprocessHtml(clean);
+
+  // Prepend a formatted title from filename if present
+  if (filename) {
+    const titleText = formatFilenameAsTitle(filename);
+    if (titleText) {
+      html = `<div class="preview-title">${DOMPurify.sanitize(titleText)}</div>` + html;
+    }
+  }
+
+  return html;
 }
 
-export default function Preview({ body, onNavigate, onSearchTag }: Props) {
+/** Strip timestamp ID and extension, convert to sentence case. */
+function formatFilenameAsTitle(filename: string): string {
+  // Remove .md extension
+  let title = filename.replace(/\.md$/i, '');
+  // Strip leading timestamp ID (12-14 digits + optional space)
+  title = title.replace(/^\d{12,14}\s*/, '');
+  if (!title) return '';
+  // Convert to sentence case: lowercase everything, uppercase first char
+  return title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
+}
+
+export default function Preview({ body, filename, onNavigate, onSearchTag }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = useCallback(
@@ -84,7 +106,7 @@ export default function Preview({ body, onNavigate, onSearchTag }: Props) {
     return () => el.removeEventListener('click', handleClick);
   }, [handleClick]);
 
-  const html = renderMarkdown(body);
+  const html = renderMarkdown(body, filename);
 
   return (
     <div

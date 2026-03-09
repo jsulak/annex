@@ -8,7 +8,7 @@ test.describe('Note list stability during arrow-key navigation', () => {
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('list order does not change when auto-save fires during navigation', async ({ page }) => {
+  test('edited note moves to top of list after auto-save', async ({ page }) => {
     const noteList = page.locator('#note-list');
     const noteItems = noteList.locator('> div');
 
@@ -20,6 +20,7 @@ test.describe('Note list stability during arrow-key navigation', () => {
     expect(initialOrder.length).toBeGreaterThanOrEqual(3);
 
     // Click the LAST note in the list (least recently modified)
+    const lastNoteText = initialOrder[initialOrder.length - 1];
     await noteItems.last().click();
     await expect(page.locator('.cm-content')).toBeVisible({ timeout: 5_000 });
 
@@ -27,18 +28,12 @@ test.describe('Note list stability during arrow-key navigation', () => {
     await page.locator('.cm-content').click();
     await page.keyboard.type(' edited');
 
-    // Navigate up with arrow key — this triggers flushSave for the edited note
-    await noteList.focus();
-    await page.keyboard.press('ArrowUp');
-
-    // Wait for auto-save to complete (save indicator appears then goes away)
+    // Wait for auto-save to complete
     await expect(page.getByText('Saved')).toBeVisible({ timeout: 5_000 });
 
-    // Capture the order after auto-save
-    const orderAfterSave = await noteItems.allTextContents();
-
-    // The list order must remain the same — no titles should have jumped
-    expect(orderAfterSave).toEqual(initialOrder);
+    // The edited note should now be first (sorted by last modified)
+    const newFirstText = await noteItems.first().textContent();
+    expect(newFirstText).toContain(lastNoteText.trim());
   });
 
   test('navigating notes without editing does not trigger a save', async ({ page }) => {
