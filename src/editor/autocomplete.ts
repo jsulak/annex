@@ -7,7 +7,7 @@ import {
 
 export interface CompletionProviders {
   /** Return note titles/IDs for [[ autocomplete. */
-  getNotes: () => Array<{ id: string; title: string }>;
+  getNotes: () => Array<{ id: string; title: string; filename: string }>;
   /** Return tag names for # autocomplete. */
   getTags: () => string[];
 }
@@ -28,15 +28,18 @@ function wikiLinkCompletion(providers: CompletionProviders) {
     const options = notes
       .filter(
         (n) =>
+          n.filename.toLowerCase().includes(query) ||
           n.title.toLowerCase().includes(query) ||
           n.id.includes(query),
       )
       .slice(0, 30)
       .map((n) => {
         const linkTarget = n.id || n.title;
+        // Display filename (strip .md extension) as the label
+        const displayName = n.filename.replace(/\.md$/i, '');
         return {
-          label: n.title || n.id,
-          detail: n.id,
+          label: displayName || n.id,
+          detail: n.id !== displayName ? n.id : undefined,
           apply: `${linkTarget}]]`,
         };
       });

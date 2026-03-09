@@ -94,12 +94,13 @@ test.describe('Keyboard shortcuts', () => {
   });
 
   test('Cmd+Backspace deletes current note', async ({ page }) => {
-    // Create a throwaway note
+    // Create a throwaway note via dialog
     await page.locator('button[title="New note"]').click();
+    const titleInput = page.locator('input[placeholder="Note title..."]');
+    await expect(titleInput).toBeVisible({ timeout: 5_000 });
+    await titleInput.fill('Keyboard delete test');
+    await page.locator('button:has-text("Create")').click();
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
-    await page.locator('.cm-content').click();
-    await page.keyboard.type('Keyboard delete test');
-    await expect(page.getByText('Saved')).toBeVisible({ timeout: 10_000 });
 
     const notesBefore = await page.locator('#note-list > div').count();
 

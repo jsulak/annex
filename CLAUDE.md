@@ -41,17 +41,26 @@ npm run setup
 ## Current Tasks
 Work through these in order. Do not move to the next task until the current one is verified working. Test each change before marking complete.
 
-- [ ] Bug fix - When editing a document, if you go to preview, the text that shows up is the original text, before editing. When you go back to edit view, that "original" text shows up in the editor. If you edit that text, and trigger an auto-save, you can lose previous edits. Create tests, fix. Consider other possible cases and create tests, verify proper behavior, and fix any bugs.
-- [ ] Bug fix - Link drop down uses first H1 in document as title, not actual document filename. It should use the filename.
-- [ ] Keyboard shortcuts for text formatting in editor (Cmd+B bold, Cmd+I italic, Cmd+U underline, Cmd+K link)
-- [ ] Improve new note creation: show a title prompt dialog, name the file from the title, pre-populate template and header, add backlink placeholder at bottom
-- [ ] Right-click context menu on note list items: Rename, Delete
-- [ ] Remove the delete button from the toolbar / editor header — deletion is via right-click menu only
-- [ ] On edit, move the edited note to the top of the note list (sort by last modified, update in real time)
-- [ ] URL scheme for notes: update the browser URL as the user navigates (e.g. `/note/202401151432`), support browser back/forward button and iPhone swipe gestures for navigation history
-- [ ] Fix preview — ordered and unordered lists missing numbers and bullets (check CSS, ensure list styles are not reset)
-- [ ] Fix preview — show a formatted title derived from filename: strip the timestamp ID, convert to sentence case
-- [ ] Fix preview — standard header material (h1, h2, h3) should render with correct hierarchy and spacing
+- [x] Bug fix - When editing a document, if you go to preview, the text that shows up is the original text, before editing. When you go back to edit view, that "original" text shows up in the editor. If you edit that text, and trigger an auto-save, you can lose previous edits. Create tests, fix. Consider other possible cases and create tests, verify proper behavior, and fix any bugs.
+- [x] Bug fix - Link drop down uses first H1 in document as title, not actual document filename. It should use the filename.
+- [x] Keyboard shortcuts for text formatting in editor (Cmd+B bold, Cmd+I italic, Cmd+U underline, Cmd+K link)
+- [x] Improve new note creation: show a title prompt dialog, name the file from the title, pre-populate template and header, add backlink placeholder at bottom
+- [x] Right-click context menu on note list items: Rename, Delete
+- [x] Remove the delete button from the toolbar / editor header — deletion is via right-click menu only
+- [x] On edit, move the edited note to the top of the note list (sort by last modified, update in real time)
+- [x] URL scheme for notes: update the browser URL as the user navigates (e.g. `/note/202401151432`), support browser back/forward button and iPhone swipe gestures for navigation history
+- [x] Fix preview — ordered and unordered lists missing numbers and bullets (check CSS, ensure list styles are not reset)
+- [x] Fix preview — show a formatted title derived from filename: strip the timestamp ID, convert to sentence case
+- [x] Fix preview — standard header material (h1, h2, h3) should render with correct hierarchy and spacing
+- [ ] Feature - File list does not update if content updated in background and synced. File updates should trigger refresh of file list with latest files and sorting.
+- [ ] Bugfix - Searching for "a man needs to be needed" does not find a note with "A man needs to be needed" in the plaintext "title" metadata in a document.
+- [ ] When using a keyboard shortcut for text formatting, and you are inside a formatted region, it should toggle the formatting.
+- [ ] Need to fix the file creation - ask me when you get to it.
+- [ ] When renaming a file, it disapears from the file list
+- [ ] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
+
+
+
 
 ## Current Status
 [ Update this section as features are completed ]
@@ -75,6 +84,17 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Wiki-link autocomplete inserts note ID instead of title
 - [x] Faded markdown formatting marks (##, *, _) with darker list/quote marks
 - [x] Link decorations (inline links collapse with clickable text + expand icon, bare URLs clickable, hover tooltip)
+- [x] Preview edit integrity (liveContent as single source of truth, ref-based sync)
+- [x] Link autocomplete uses filename instead of H1 title
+- [x] Text formatting shortcuts (Cmd+B/I/U/K)
+- [x] New note dialog (title prompt, template with backlink placeholder)
+- [x] Right-click context menu (Rename, Delete) on note list
+- [x] Delete button removed from toolbar (context menu only)
+- [x] Sort by last modified (edited notes move to top)
+- [x] URL scheme for notes (/note/:id, browser back/forward, popstate)
+- [x] Preview list styles (bullets and numbers restored)
+- [x] Preview title from filename (timestamp stripped, sentence case)
+- [x] Preview heading hierarchy (h1-h6 with distinct sizes and borders)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)

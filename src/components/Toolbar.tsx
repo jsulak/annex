@@ -9,6 +9,7 @@ export default function Toolbar() {
   const clearSearch = useStore((s) => s.clearSearch);
   const searchQuery = useStore((s) => s.searchQuery);
   const createNote = useStore((s) => s.createNote);
+  const setNewNoteDialogVisible = useStore((s) => s.setNewNoteDialogVisible);
   const deselectNote = useStore((s) => s.deselectNote);
   const goBack = useStore((s) => s.goBack);
   const goForward = useStore((s) => s.goForward);
@@ -182,7 +183,7 @@ export default function Toolbar() {
       <button
         className="toolbar-btn"
         title="New note"
-        onClick={() => createNote()}
+        onClick={() => setNewNoteDialogVisible(true)}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '16px',

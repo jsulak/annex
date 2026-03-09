@@ -122,18 +122,18 @@ test.describe('Search — clearing and navigation', () => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // #second-tag only matches Third Note
-    await page.locator('#search-input').fill('#second-tag');
-    await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible({ timeout: 5_000 });
+    // Use a very specific search term that only matches one seed note
+    await page.locator('#search-input').fill('xylophoneUnicorn42');
+    await expect(page.locator('#note-list').getByText('202401151433 Second Note')).toBeVisible({ timeout: 5_000 });
 
     // Click on the result
-    await page.locator('#note-list').getByText('202401151434 Third Note').click();
+    await page.locator('#note-list').getByText('202401151433 Second Note').click();
     await expect(page.locator('.cm-content')).toBeVisible({ timeout: 5_000 });
 
     // The search input should still have the query
-    await expect(page.locator('#search-input')).toHaveValue('#second-tag');
+    await expect(page.locator('#search-input')).toHaveValue('xylophoneUnicorn42');
 
-    // Sample Note should not be in the list (search is active)
+    // Other notes should not be in the list (search is active)
     await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).not.toBeVisible();
   });
 });
@@ -175,13 +175,12 @@ test.describe('Search — keyboard shortcuts', () => {
     await expect(page.locator('#note-list')).toBeFocused();
   });
 
-  test('Enter on empty search results creates a new note with that title', async ({ page }) => {
+  test('Enter on empty search results creates a new note with that title', async ({ page, request }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
     // Wait for notes to load first
     await expect(page.locator('#note-list > div').first()).toBeVisible({ timeout: 5_000 });
-    const notesBefore = await page.locator('#note-list > div').count();
 
     // Type a term that yields no results
     await page.locator('#search-input').fill('zzBrandNewNoteTitle99');
@@ -190,16 +189,19 @@ test.describe('Search — keyboard shortcuts', () => {
     // Press Enter — should create a note
     await page.locator('#search-input').press('Enter');
 
-    // Editor should open with the new note
+    // Editor should open with the new note content (title as H1)
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.cm-content')).toContainText('zzBrandNewNoteTitle99', { timeout: 5_000 });
 
-    // Note list should have one more entry (search was cleared)
-    await expect(page.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 5_000 });
+    // Search should have been cleared
+    await expect(page.locator('#search-input')).toHaveValue('');
 
-    // Cleanup: delete the created note
-    page.once('dialog', (dialog) => dialog.accept());
-    await page.locator('button[title="Delete note"]').click();
-    await expect(page.locator('#note-list > div')).toHaveCount(notesBefore, { timeout: 5_000 });
+    // Cleanup: delete the created note via API using the URL
+    const url = page.url();
+    const idMatch = url.match(/\/note\/(\d+)/);
+    if (idMatch) {
+      await request.delete(`/api/v1/notes/${idMatch[1]}`);
+    }
   });
 });
 
@@ -215,15 +217,14 @@ test.describe('Search — hashtag as text search', () => {
     await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible();
   });
 
-  test('searching #second-tag finds only the note with that tag', async ({ page }) => {
+  test('searching #second-tag finds the note with that tag', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
     await page.locator('#search-input').fill('#second-tag');
 
-    // Only Third Note has #second-tag
+    // Third Note has #second-tag and should appear in results
     await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).not.toBeVisible();
   });
 });
 

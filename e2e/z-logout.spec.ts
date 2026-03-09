@@ -32,10 +32,17 @@ test.describe('Logout', () => {
   test('after logout, API calls are rejected', async ({ browser, baseURL }) => {
     const context = await browser.newContext({ baseURL });
 
-    // Login to get our own session
-    const loginRes = await context.request.post('/api/v1/auth/login', {
+    // Login to get our own session (retry once if rate-limited)
+    let loginRes = await context.request.post('/api/v1/auth/login', {
       data: { password: 'testpassword123' },
     });
+    if (loginRes.status() === 429) {
+      // Wait briefly and retry if rate-limited by prior tests
+      await new Promise((r) => setTimeout(r, 2000));
+      loginRes = await context.request.post('/api/v1/auth/login', {
+        data: { password: 'testpassword123' },
+      });
+    }
     expect(loginRes.ok()).toBe(true);
 
     // Logout

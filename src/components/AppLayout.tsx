@@ -9,6 +9,7 @@ import QuickOpen from './QuickOpen.js';
 import TagsModal from './TagsModal.js';
 import SettingsPanel from './SettingsPanel.js';
 import KeyboardHelp from './KeyboardHelp.js';
+import NewNoteDialog from './NewNoteDialog.js';
 
 const STORAGE_KEY = 'annex-panel-width';
 const DEFAULT_WIDTH = 280;
@@ -33,6 +34,10 @@ export default function AppLayout() {
   const tagsModalVisible = useStore((s) => s.tagsModalVisible);
   const settingsVisible = useStore((s) => s.settingsVisible);
   const keyboardHelpVisible = useStore((s) => s.keyboardHelpVisible);
+  const newNoteDialogVisible = useStore((s) => s.newNoteDialogVisible);
+  const setNewNoteDialogVisible = useStore((s) => s.setNewNoteDialogVisible);
+  const createNote = useStore((s) => s.createNote);
+  const selectNote = useStore((s) => s.selectNote);
   const selectedId = useStore((s) => s.selectedId);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
@@ -40,9 +45,31 @@ export default function AppLayout() {
   const dragging = useRef(false);
 
   useEffect(() => {
-    fetchNotes();
+    fetchNotes().then(() => {
+      // On initial load, check URL for /note/:id
+      const match = window.location.pathname.match(/^\/note\/(\d+)$/);
+      if (match) {
+        selectNote(match[1]);
+      }
+    });
     fetchSettings();
-  }, [fetchNotes, fetchSettings]);
+  }, [fetchNotes, fetchSettings, selectNote]);
+
+  // Handle browser back/forward
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      const noteId = e.state?.noteId;
+      if (noteId) {
+        // Set _navigatingHistory so selectNote doesn't push to browser history
+        useStore.setState({ _navigatingHistory: true });
+        useStore.getState().selectNote(noteId);
+      } else {
+        useStore.setState({ selectedId: null, selectedNote: null });
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(panelWidth));
@@ -124,6 +151,14 @@ export default function AppLayout() {
       {tagsModalVisible && <TagsModal />}
       {settingsVisible && <SettingsPanel />}
       {keyboardHelpVisible && <KeyboardHelp />}
+      <NewNoteDialog
+        visible={newNoteDialogVisible}
+        onConfirm={(title) => {
+          setNewNoteDialogVisible(false);
+          createNote(title);
+        }}
+        onCancel={() => setNewNoteDialogVisible(false)}
+      />
     </div>
   );
 }

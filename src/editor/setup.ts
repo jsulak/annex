@@ -9,6 +9,7 @@ import { styleTags } from '@lezer/highlight';
 import { zettelTheme, zettelHighlight, listMarkTag, quoteMarkTag } from './theme.js';
 import { wikiLinks } from './wikilinks.js';
 import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
+import { formattingKeymap } from './keymaps.js';
 import { listIndent } from './listIndent.js';
 import { linkDecorations } from './linkDecorations.js';
 
@@ -83,6 +84,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     EditorView.lineWrapping,
     history(),
     closeBrackets(),
+    formattingKeymap(),
     keymap.of([
       { key: 'Tab', run: smartListIndent },
       { key: 'Shift-Tab', run: indentLess },
