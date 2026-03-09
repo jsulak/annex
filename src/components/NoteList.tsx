@@ -280,7 +280,7 @@ export default function NoteList() {
               onClick: () => {
                 setRenaming({
                   noteId: contextMenu.noteId,
-                  noteFilename: contextMenu.noteFilename,
+                  filename: contextMenu.noteFilename,
                 });
                 setRenameValue(contextMenu.noteFilename.replace(/\.md$/i, ''));
               },
