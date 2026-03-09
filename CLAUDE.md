@@ -38,6 +38,19 @@ npm run setup
 - Session cookie must be `HttpOnly + Secure + SameSite=Strict`
 - Never re-fetch the full note list on SSE events — update individual entries only
 
+## Current Tasks
+Work through these in order. Do not move to the next task until the current one is verified working. Test each change before marking complete.
+
+- [ ] Keyboard shortcuts for text formatting in editor (Cmd+B bold, Cmd+I italic, Cmd+U underline, Cmd+K link)
+- [ ] Improve new note creation: show a title prompt dialog, name the file from the title, pre-populate template and header, add backlink placeholder at bottom
+- [ ] Right-click context menu on note list items: Rename, Delete
+- [ ] Remove the delete button from the toolbar / editor header — deletion is via right-click menu only
+- [ ] On edit, move the edited note to the top of the note list (sort by last modified, update in real time)
+- [ ] URL scheme for notes: update the browser URL as the user navigates (e.g. `/note/202401151432`), support browser back/forward button and iPhone swipe gestures for navigation history
+- [ ] Fix preview — ordered and unordered lists missing numbers and bullets (check CSS, ensure list styles are not reset)
+- [ ] Fix preview — show a formatted title derived from filename: strip the timestamp ID, convert to sentence case
+- [ ] Fix preview — standard header material (h1, h2, h3) should render with correct hierarchy and spacing
+
 ## Current Status
 [ Update this section as features are completed ]
 
@@ -65,6 +78,7 @@ npm run setup
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)
 - [x] Polish (keyboard help overlay, error states, responsive layout)
+
 
 ## Testing
 
