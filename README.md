@@ -1,10 +1,18 @@
-# Annex
+<p align="center">
+  <img src="public/annex-icon-512.svg" alt="Annex" width="80" />
+</p>
 
-A single-user, self-hosted notes web app — heavily inspired by [The Archive](https://zettelkasten.de/the-archive/) and designed to be used in concert with it. Notes are plain Markdown files on the filesystem with no database. Designed to be accessed from any browser after authenticating with a single password. Uses syncthing in the background to keep notes synced with a local copy on your desktop.
+<h1 align="center">Annex</h1>
+
+<p align="center">A single-user, self-hosted Zettelkasten web app</p>
+
+<p align="center">
+  <img src="annex_screenshot.png" alt="Annex screenshot" width="800" />
+</p>
+
+Heavily inspired by [The Archive](https://zettelkasten.de/the-archive/) and designed to be used in concert with it. Notes are plain Markdown files on the filesystem with no database. Designed to be accessed from any browser after authenticating with a single password. Uses syncthing in the background to keep notes synced with a local copy on your desktop.
 
 This software is the software I want to use; it is probably not the software that you want to use. I created this as an experiment — could I create, with Claude Code, a customized version of a piece of software that I use heavily? This is the result, and I can safely say that I would have been unable to do so on any reasonable schedule, and likely not to this level of quality.
-
-![Annex screenshot](annex_screenshot.png)
 
 ## Features
 
