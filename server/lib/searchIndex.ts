@@ -133,7 +133,7 @@ function generateSnippet(
 function intersectSearchResults(terms: string[]): Set<string> {
   let result: Set<string> | null = null;
   for (const term of terms) {
-    const ids = new Set(flexIndex.search(term).map(String));
+    const ids = new Set(flexIndex.search(term, 100_000).map(String));
     if (result === null) {
       result = ids;
     } else {

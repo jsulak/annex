@@ -52,8 +52,8 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Fix preview — ordered and unordered lists missing numbers and bullets (check CSS, ensure list styles are not reset)
 - [x] Fix preview — show a formatted title derived from filename: strip the timestamp ID, convert to sentence case
 - [x] Fix preview — standard header material (h1, h2, h3) should render with correct hierarchy and spacing
-- [ ] Feature - File list does not update if content updated in background and synced. File updates should trigger refresh of file list with latest files and sorting.
-- [ ] Bugfix - Searching for "a man needs to be needed" does not find a note with "A man needs to be needed" in the plaintext "title" metadata in a document.
+- [x] Feature - File list does not update if content updated in background and synced. File updates should trigger refresh of file list with latest files and sorting.
+- [x] Bugfix - Searching for "a man needs to be needed" does not find a note with "A man needs to be needed" in the plaintext "title" metadata in a document.
 - [ ] When using a keyboard shortcut for text formatting, and you are inside a formatted region, it should toggle the formatting.
 - [ ] Need to fix the file creation - ask me when you get to it.
 - [ ] When renaming a file, it disapears from the file list
@@ -95,6 +95,8 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Preview list styles (bullets and numbers restored)
 - [x] Preview title from filename (timestamp stripped, sentence case)
 - [x] Preview heading hierarchy (h1-h6 with distinct sizes and borders)
+- [x] Background file sync (watcher detects external changes, SSE updates, note list refresh)
+- [x] Case-insensitive search fix (Flexsearch limit increased for common-word queries)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)

@@ -509,6 +509,81 @@ describe('search — index updates', () => {
   });
 });
 
+describe('search — case-insensitive multi-word queries', () => {
+  test('lowercase query matches title-case text in body', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Wisdom\n\ntitle: A man needs to be needed\ntags: #wisdom',
+    });
+
+    const results = await (
+      await http.get('/api/v1/search?q=a%20man%20needs%20to%20be%20needed')
+    ).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('multi-word query with common short words finds match', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Life Advice\n\nA man needs to be needed in order to thrive.',
+    });
+
+    const results = await (
+      await http.get('/api/v1/search?q=a%20man%20needs%20to%20be%20needed')
+    ).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('phrase search is case-insensitive for title metadata', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Note\n\ntitle: A man needs to be needed',
+    });
+
+    const results = await (
+      await http.get('/api/v1/search?q=%22a%20man%20needs%20to%20be%20needed%22')
+    ).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('common short words still find matches among many notes', async () => {
+    // Create 120+ notes so that common words like "a" and "to" exceed
+    // Flexsearch default limit of 100, which would cause intersection to miss results
+    const ids: string[] = [];
+    for (let i = 0; i < 120; i++) {
+      const id = `209701${String(Math.floor(i / 60)).padStart(2, '0')}${String(i % 60).padStart(2, '0')}`;
+      ids.push(id);
+      await http.put(`/api/v1/notes/${id}`, {
+        body: `# Filler Note ${i}\n\nA paragraph to pad the index with common words.`,
+      });
+    }
+
+    // Now create the target note
+    const targetId = nextId();
+    ids.push(targetId);
+    await http.put(`/api/v1/notes/${targetId}`, {
+      body: '# Target\n\ntitle: A man needs to be needed',
+    });
+
+    // Search with common words — should still find the target
+    const results = await (
+      await http.get('/api/v1/search?q=a%20man%20needs%20to%20be%20needed')
+    ).json();
+    expect(results.some((r: { id: string }) => r.id === targetId)).toBe(true);
+
+    // Clean up
+    for (const id of ids) {
+      await http.delete(`/api/v1/notes/${id}`);
+    }
+  });
+});
+
 describe('search — forward matching', () => {
   test('prefix search matches word beginnings', async () => {
     const id = nextId();
