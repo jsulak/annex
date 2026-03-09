@@ -4,7 +4,7 @@
 
 <h1 align="center">Annex</h1>
 
-<p align="center">A single-user, self-hosted Zettelkasten web app</p>
+<p align="center">A single-user, self-hosted note-taking web app</p>
 
 <p align="center">
   <img src="annex_screenshot.png" alt="Annex screenshot" width="800" />
