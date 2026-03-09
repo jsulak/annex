@@ -42,6 +42,7 @@ npm run setup
 Work through these in order. Do not move to the next task until the current one is verified working. Test each change before marking complete.
 
 - [ ] Bug fix - When editing a document, if you go to preview, the text that shows up is the original text, before editing. When you go back to edit view, that "original" text shows up in the editor. If you edit that text, and trigger an auto-save, you can lose previous edits. Create tests, fix. Consider other possible cases and create tests, verify proper behavior, and fix any bugs.
+- [ ] Bug fix - Link drop down uses first H1 in document as title, not actual document filename. It should use the filename.
 - [ ] Keyboard shortcuts for text formatting in editor (Cmd+B bold, Cmd+I italic, Cmd+U underline, Cmd+K link)
 - [ ] Improve new note creation: show a title prompt dialog, name the file from the title, pre-populate template and header, add backlink placeholder at bottom
 - [ ] Right-click context menu on note list items: Rename, Delete
