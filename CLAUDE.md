@@ -54,11 +54,11 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Fix preview — standard header material (h1, h2, h3) should render with correct hierarchy and spacing
 - [x] Feature - File list does not update if content updated in background and synced. File updates should trigger refresh of file list with latest files and sorting.
 - [x] Bugfix - Searching for "a man needs to be needed" does not find a note with "A man needs to be needed" in the plaintext "title" metadata in a document.
+- [ ] Add an option to increase the line spacing in edit view.
 - [ ] When using a keyboard shortcut for text formatting, and you are inside a formatted region, it should toggle the formatting.
 - [ ] Need to fix the file creation - ask me when you get to it.
-- [ ] When renaming a file, it disapears from the file list
+- [ ] When renaming a file, it disapears from the file list.
 - [ ] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
-
 
 
 
@@ -99,6 +99,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Case-insensitive search fix (Flexsearch limit increased for common-word queries)
 - [ ] Saved searches
 - [ ] Asset serving (GET /assets/:filename)
+- [ ] Lightweight service monitoring
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)
 - [x] Polish (keyboard help overlay, error states, responsive layout)
