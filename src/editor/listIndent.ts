@@ -22,7 +22,7 @@ function buildDecorations(view: EditorView): DecorationSet {
       if (indent > 0) {
         const deco = Decoration.line({
           attributes: {
-            style: `padding-left: ${indent}ch; text-indent: -${indent}ch;`,
+            style: `padding-left: calc(1.5em + ${indent}ch); text-indent: -${indent}ch;`,
           },
         });
         builder.add(line.from, line.from, deco);
