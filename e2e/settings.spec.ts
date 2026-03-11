@@ -74,6 +74,36 @@ test.describe('Settings panel', () => {
     await expect(page.getByText('Current password')).toBeVisible();
     await expect(page.getByText('New password')).toBeVisible();
   });
+
+  test('shows line height setting', async ({ page }) => {
+    await page.locator('button[title="Settings (Cmd+,)"]').click();
+    await expect(page.getByText('Line height')).toBeVisible({ timeout: 3_000 });
+
+    const lineHeightInput = page.locator('input[type="number"][min="1"][max="3"]');
+    await expect(lineHeightInput).toBeVisible();
+    await expect(lineHeightInput).toHaveValue(/[\d.]+/);
+  });
+
+  test('line height setting applies CSS variable to editor', async ({ page }) => {
+    await page.locator('button[title="Settings (Cmd+,)"]').click();
+    await expect(page.getByText('Line height')).toBeVisible({ timeout: 3_000 });
+
+    const lineHeightInput = page.locator('input[type="number"][min="1"][max="3"]');
+    await lineHeightInput.fill('2');
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    await expect(page.getByText('Settings saved')).toBeVisible({ timeout: 5_000 });
+
+    // The CSS variable should be set on :root
+    const lineHeightVar = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--line-height-editor').trim()
+    );
+    expect(lineHeightVar).toBe('2');
+
+    // Restore
+    await lineHeightInput.fill('1.6');
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    await expect(page.getByText('Settings saved')).toBeVisible({ timeout: 5_000 });
+  });
 });
 
 test.describe('Settings API', () => {
@@ -86,6 +116,7 @@ test.describe('Settings API', () => {
     expect(data.settings).toHaveProperty('autoSaveDelay');
     expect(data.settings).toHaveProperty('fontSize');
     expect(data.settings).toHaveProperty('darkMode');
+    expect(data.settings).toHaveProperty('lineHeight');
     // passwordHash should NOT be exposed
     expect(data).not.toHaveProperty('passwordHash');
   });
@@ -103,6 +134,20 @@ test.describe('Settings API', () => {
     // Restore original
     await request.put('/api/v1/config', {
       data: { settings: { fontSize: 13 } },
+    });
+  });
+
+  test('PUT /api/v1/config updates lineHeight', async ({ request }) => {
+    const response = await request.put('/api/v1/config', {
+      data: { settings: { lineHeight: 2.0 } },
+    });
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.settings.lineHeight).toBe(2.0);
+
+    // Restore original
+    await request.put('/api/v1/config', {
+      data: { settings: { lineHeight: 1.6 } },
     });
   });
 

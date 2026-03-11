@@ -32,7 +32,6 @@ export const zettelTheme = EditorView.theme({
     backgroundColor: 'var(--bg-editor)',
     fontFamily: 'var(--font-mono)',
     fontSize: 'var(--font-size-editor, 13px)',
-    lineHeight: '1.6',
   },
   '.cm-content': {
     maxWidth: '680px',
@@ -42,6 +41,7 @@ export const zettelTheme = EditorView.theme({
   },
   '.cm-scroller': {
     overflow: 'auto',
+    lineHeight: 'var(--line-height-editor, 1.6)',
   },
   '.cm-gutters': {
     display: 'none',

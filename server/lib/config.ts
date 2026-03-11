@@ -12,6 +12,7 @@ export interface Config {
     noteTemplate: string;
     indexExtensions: string[];
     darkMode: 'auto' | 'light' | 'dark';
+    lineHeight: number;
   };
 }
 
@@ -26,6 +27,7 @@ const DEFAULT_CONFIG: Config = {
     noteTemplate: '',
     indexExtensions: ['.md'],
     darkMode: 'auto',
+    lineHeight: 1.6,
   },
 };
 

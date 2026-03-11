@@ -11,6 +11,7 @@ interface Settings {
   noteTemplate: string;
   indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
+  lineHeight: number;
 }
 
 const labelStyle: React.CSSProperties = {
@@ -323,6 +324,20 @@ export default function SettingsPanel() {
                 max={24}
                 value={settings.fontSize}
                 onChange={(e) => update('fontSize', parseInt(e.target.value, 10) || 13)}
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Line height */}
+            <div>
+              <div style={labelStyle}>Line height</div>
+              <input
+                type="number"
+                min={1}
+                max={3}
+                step={0.1}
+                value={settings.lineHeight ?? 1.6}
+                onChange={(e) => update('lineHeight', parseFloat(e.target.value) || 1.6)}
                 style={inputStyle}
               />
             </div>

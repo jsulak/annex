@@ -14,10 +14,12 @@ export interface AppSettings {
   noteTemplate: string;
   indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
+  lineHeight: number;
 }
 
 function applySettingsToDOM(settings: AppSettings) {
   document.documentElement.style.setProperty('--font-size-editor', `${settings.fontSize}px`);
+  document.documentElement.style.setProperty('--line-height-editor', `${settings.lineHeight ?? 1.6}`);
 }
 
 interface ConflictInfo {
