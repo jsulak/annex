@@ -45,6 +45,20 @@ test.describe('URL-based navigation', () => {
     expect(page.url()).toContain('/note/202401151433');
   });
 
+  test('direct URL navigation works for notes without timestamp ID', async ({ page, request }) => {
+    // Create a note with no timestamp prefix
+    await request.put('/api/v1/notes/PlainNote', { data: { body: 'plain note content', filename: 'PlainNote.md' } });
+
+    // Navigate directly to its URL
+    await page.goto('/note/PlainNote');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.cm-content')).toContainText('plain note content', { timeout: 5_000 });
+
+    // Clean up
+    await request.delete('/api/v1/notes/PlainNote');
+  });
+
   test('deselecting note returns URL to /', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
