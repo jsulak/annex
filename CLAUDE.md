@@ -68,12 +68,12 @@ Work through these in order. Do not move to the next task until the current one 
 - [ ] Automated backups (cron snapshot of NOTES_DIR — Syncthing is not a backup)
 - [x] Atomic file writes (write to temp file then rename, prevent corruption on crash)
 - [ ] CSRF protection (token-based, defense in depth beyond SameSite cookie)
-- [ ] npm audit in CI or pre-deploy check
+- [x] npm audit in CI or pre-deploy check
 - [ ] Structured log rotation (pino-roll or logrotate, prevent disk fill)
 - [ ] External uptime monitor (UptimeRobot/Healthchecks.io hitting /api/v1/health)
 - [ ] Disk space monitoring and alerting
-- [ ] Response compression (@fastify/compress, gzip/brotli)
-- [ ] Static asset cache headers (long Cache-Control for hashed Vite assets)
+- [x] Response compression (@fastify/compress, gzip/brotli)
+- [x] Static asset cache headers (long Cache-Control for hashed Vite assets)
 - [ ] PM2 config hardening (max_restarts, restart_delay, max_memory_restart)
 - [ ] Post-deploy smoke test (hit health endpoint after pm2 restart)
 
@@ -123,6 +123,9 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Graceful shutdown (SIGTERM/SIGINT → close Fastify, stop watcher)
 - [x] Atomic file writes (temp file + rename)
 - [x] PM2 config hardening (max_memory_restart, kill_timeout)
+- [x] Response compression (gzip/brotli via @fastify/compress)
+- [x] Static asset cache headers (1yr for hashed assets, no-cache for index.html)
+- [x] npm audit --audit-level=high in deploy playbook (blocks deploy on high/critical)
 
 
 ## Testing

@@ -11,6 +11,12 @@
         chdir: "{{ playbook_dir }}/.."
       changed_when: true
 
+    - name: Check for high/critical vulnerabilities
+      ansible.builtin.command:
+        cmd: npm audit --audit-level=high
+        chdir: "{{ playbook_dir }}/.."
+      changed_when: false
+
     - name: Run npm build
       ansible.builtin.command:
         cmd: npm run build
