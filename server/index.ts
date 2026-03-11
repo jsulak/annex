@@ -6,6 +6,7 @@ import fastifyStatic from '@fastify/static';
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import helmet from '@fastify/helmet';
+import compress from '@fastify/compress';
 import { registerAuth } from './auth.js';
 import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
@@ -53,6 +54,9 @@ async function start() {
     logger: true,
     trustProxy: IS_PROD,
   });
+
+  // Response compression (gzip/brotli/deflate)
+  await app.register(compress, { global: true });
 
   // Security headers
   await app.register(helmet, {
@@ -143,6 +147,15 @@ async function start() {
     await app.register(fastifyStatic, {
       root: distPath,
       wildcard: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.includes('/assets/')) {
+          // Hashed Vite assets — cache for 1 year
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          // index.html and other entry points — always revalidate
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      },
     });
 
     // SPA fallback: serve index.html for non-API routes
