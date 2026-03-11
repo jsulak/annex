@@ -59,7 +59,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Need to fix the file creation - ask me when you get to it.
 - [x] When renaming a file, it disapears from the file list.
 - [x] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
-- [ ] Make block quotes plain text, not italic.
+- [x] Make block quotes plain text, not italic.
 
 
 ## Current Status

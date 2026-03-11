@@ -86,7 +86,6 @@ export const zettelTheme = EditorView.theme({
   },
   '.cmt-quote': {
     color: 'var(--text-secondary)',
-    fontStyle: 'italic',
   },
   '.cmt-meta': {
     color: 'var(--text-secondary)',
