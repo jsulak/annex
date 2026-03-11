@@ -13,7 +13,7 @@ import { registerTags } from './routes/tags.js';
 import { registerEvents } from './routes/events.js';
 import { registerConfig } from './routes/config.js';
 import { registerSync } from './routes/sync.js';
-import { buildIndex } from './lib/searchIndex.js';
+import { buildIndex, getIndexSize } from './lib/searchIndex.js';
 import { startWatcher } from './lib/watcher.js';
 
 function requireEnv(name: string, minLength = 1): string {
@@ -101,9 +101,34 @@ async function start() {
   // Start file watcher (after index is built)
   await startWatcher(resolvedNotesDir);
 
-  // Health check (public)
-  app.get('/api/v1/health', async () => {
-    return { status: 'ok' };
+  // Health check (authenticated)
+  app.get('/api/v1/health', async (_request, reply) => {
+    const mem = process.memoryUsage();
+
+    // Disk usage of notes directory
+    let notesDirBytes = 0;
+    try {
+      const files = await fs.readdir(resolvedNotesDir);
+      for (const f of files) {
+        try {
+          const stat = await fs.stat(path.join(resolvedNotesDir, f));
+          if (stat.isFile()) notesDirBytes += stat.size;
+        } catch { /* skip */ }
+      }
+    } catch { /* skip */ }
+
+    return reply.send({
+      status: 'ok',
+      uptime: Math.floor(process.uptime()),
+      memory: {
+        rss: mem.rss,
+        heapUsed: mem.heapUsed,
+        heapTotal: mem.heapTotal,
+      },
+      noteCount: getIndexSize(),
+      notesDirBytes,
+      notesDir: resolvedNotesDir,
+    });
   });
 
   // Block search engine indexing

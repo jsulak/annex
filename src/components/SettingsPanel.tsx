@@ -14,6 +14,15 @@ interface Settings {
   lineHeight: number;
 }
 
+interface HealthData {
+  status: string;
+  uptime: number;
+  memory: { rss: number; heapUsed: number; heapTotal: number };
+  noteCount: number;
+  notesDirBytes: number;
+  notesDir: string;
+}
+
 const labelStyle: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: '12px',
@@ -71,6 +80,10 @@ export default function SettingsPanel() {
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
+  // Server status state
+  const [healthData, setHealthData] = useState<HealthData | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -101,6 +114,24 @@ export default function SettingsPanel() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [close]);
+
+  // Fetch server health on mount
+  useEffect(() => {
+    let cancelled = false;
+    setHealthLoading(true);
+    void (async () => {
+      try {
+        const res = await apiFetch('/api/v1/health');
+        if (res.ok && !cancelled) {
+          const data = await res.json() as HealthData;
+          setHealthData(data);
+        }
+      } finally {
+        if (!cancelled) setHealthLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Fetch sync status on mount
   useEffect(() => {
@@ -467,6 +498,12 @@ export default function SettingsPanel() {
               Sync (Syncthing)
             </h3>
 
+            {syncAvailable === null && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Checking...
+              </div>
+            )}
+
             {syncAvailable === false && (
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 Syncthing is not configured on this server.
@@ -543,6 +580,50 @@ export default function SettingsPanel() {
                   )}
                 </div>
               </>
+            )}
+
+            {/* Divider */}
+            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '8px 0' }} />
+
+            {/* Server Status */}
+            <h3
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '14px',
+                fontWeight: 600,
+                margin: '0',
+                color: 'var(--text-primary)',
+              }}
+            >
+              Server Status
+            </h3>
+
+            {healthLoading && (
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Loading...
+              </div>
+            )}
+
+            {healthData && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {[
+                  ['Status', healthData.status],
+                  ['Uptime', `${Math.floor(healthData.uptime / 3600)}h ${Math.floor((healthData.uptime % 3600) / 60)}m`],
+                  ['Notes indexed', String(healthData.noteCount)],
+                  ['Notes dir size', `${(healthData.notesDirBytes / 1024).toFixed(1)} KB`],
+                  ['Heap used', `${(healthData.memory.heapUsed / 1024 / 1024).toFixed(1)} MB`],
+                  ['Heap total', `${(healthData.memory.heapTotal / 1024 / 1024).toFixed(1)} MB`],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ display: 'flex', gap: '8px' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-secondary)', minWidth: '120px' }}>
+                      {label}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--text-primary)' }}>
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
