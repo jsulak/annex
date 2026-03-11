@@ -21,8 +21,14 @@ test.describe('New note dialog', () => {
     // Editor should open with the template content
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
     const editorText = await page.locator('.cm-content').textContent();
+    expect(editorText).toContain('Title:');
     expect(editorText).toContain('My Test Note');
-    expect(editorText).toContain('Backlinks:');
+    expect(editorText).toContain('Date:');
+    expect(editorText).toContain('Keywords:');
+    // Backlinks line with note ID wikilink
+    expect(editorText).toMatch(/Backlinks: \[\[\d{12}\]\]/);
+    // No H1 heading
+    expect(editorText).not.toMatch(/^# /m);
 
     // Verify the filename includes the title (check note list)
     await expect(page.locator('#note-list')).toContainText('My Test Note');
