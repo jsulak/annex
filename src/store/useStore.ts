@@ -194,7 +194,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   createNote: async (title?: string) => {
     const id = generateId();
-    const body = title ? `# ${title}\n\n\n\n---\nBacklinks:\n` : '';
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const body = title ? `Title:\t\t${title}\nDate:\t\t${dateStr}\nKeywords:\t\n\n\n\n\nBacklinks: [[${id}]]\n` : '';
     const filename = title ? `${id} ${title}.md` : undefined;
     const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
       method: 'PUT',
