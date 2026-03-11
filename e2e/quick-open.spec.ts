@@ -82,15 +82,18 @@ test.describe('Quick Open dialog', () => {
 
   test('arrow keys navigate the list', async ({ page }) => {
     await page.keyboard.press('Meta+o');
-    await expect(page.getByPlaceholder('Quick open... type to filter')).toBeVisible();
+    const input = page.getByPlaceholder('Quick open... type to filter');
+    await expect(input).toBeVisible();
 
-    // Arrow down then Enter selects the second item
+    // Wait for list to populate before navigating
+    await expect(input.locator('..').locator('..').getByText('Sample Note')).toBeVisible({ timeout: 5_000 });
+
+    // Arrow down moves to second item, Enter selects it
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
 
-    // Dialog should close
-    await expect(page.getByPlaceholder('Quick open... type to filter')).not.toBeVisible();
-    // An editor should be visible (some note was opened)
+    // Dialog should close and editor should be visible
+    await expect(input).not.toBeVisible({ timeout: 5_000 });
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
   });
 });
