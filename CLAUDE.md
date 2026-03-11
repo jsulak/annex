@@ -57,7 +57,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Add an option to increase the line spacing in edit view.
 - [ ] When using a keyboard shortcut for text formatting, and you are inside a formatted region, it should toggle the formatting.
 - [ ] Need to fix the file creation - ask me when you get to it.
-- [ ] When renaming a file, it disapears from the file list.
+- [x] When renaming a file, it disapears from the file list.
 - [ ] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
 
 

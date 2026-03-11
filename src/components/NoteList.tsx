@@ -18,6 +18,7 @@ export default function NoteList() {
   const selectedId = useStore((s) => s.selectedId);
   const selectNote = useStore((s) => s.selectNote);
   const deleteNote = useStore((s) => s.deleteNote);
+  const renameNoteInList = useStore((s) => s.renameNoteInList);
   const loading = useStore((s) => s.loading);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -148,9 +149,9 @@ export default function NoteList() {
         },
       );
       if (res.ok) {
-        // Refresh notes list to get the updated filename
-        await useStore.getState().fetchNotes();
-        // Re-select the note to refresh its data
+        const updated = await res.json();
+        // Update filename in-place — avoids race with SSE note:deleted event
+        renameNoteInList(renaming.noteId, updated.filename, updated.title);
         if (useStore.getState().selectedId === renaming.noteId) {
           await useStore.getState().selectNote(renaming.noteId);
         }
@@ -159,7 +160,7 @@ export default function NoteList() {
       // Ignore errors
     }
     setRenaming(null);
-  }, [renaming, renameValue]);
+  }, [renaming, renameValue, renameNoteInList]);
 
   const handleDelete = useCallback(
     async (noteId: string, noteFilename: string) => {
