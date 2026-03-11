@@ -124,11 +124,11 @@ export async function startWatcher(notesDir: string): Promise<void> {
   }
 
   watcher.on('add', (filePath: string) => {
-    debounceFile(filePath, () => handleAddOrChange(filePath, 'note:created'));
+    debounceFile(filePath, () => void handleAddOrChange(filePath, 'note:created'));
   });
 
   watcher.on('change', (filePath: string) => {
-    debounceFile(filePath, () => handleAddOrChange(filePath, 'note:modified'));
+    debounceFile(filePath, () => void handleAddOrChange(filePath, 'note:modified'));
   });
 
   watcher.on('unlink', (filePath: string) => {

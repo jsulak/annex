@@ -32,7 +32,7 @@ export default function Toolbar() {
       }
 
       timerRef.current = setTimeout(() => {
-        search(value.trim());
+        void search(value.trim());
       }, DEBOUNCE_MS);
     },
     [search, clearSearch],
@@ -104,7 +104,7 @@ export default function Toolbar() {
         if (query) {
           if (inputRef.current) inputRef.current.value = '';
           clearSearch();
-          createNote(query);
+          void createNote(query);
         }
       }
     },

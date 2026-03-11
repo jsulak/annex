@@ -45,7 +45,7 @@ export default function QuickOpen() {
 
   const handleSelect = useCallback(
     (id: string) => {
-      selectNote(id);
+      void selectNote(id);
       close();
     },
     [selectNote, close],

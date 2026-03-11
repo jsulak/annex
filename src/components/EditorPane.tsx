@@ -146,7 +146,7 @@ export default function EditorPane() {
           n.filename.toLowerCase().includes(lower),
       );
       if (found) {
-        selectNote(found.id);
+        void selectNote(found.id);
       }
     },
     [notes, selectNote],
@@ -155,7 +155,7 @@ export default function EditorPane() {
   // Search by tag from preview
   const handleSearchTag = useCallback(
     (tag: string) => {
-      searchFn(`#${tag}`);
+      void searchFn(`#${tag}`);
     },
     [searchFn],
   );

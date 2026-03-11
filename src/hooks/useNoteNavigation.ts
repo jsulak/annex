@@ -25,7 +25,7 @@ export function useNoteNavigation() {
         e.preventDefault();
         const title = selectedNote.title || selectedNote.filename;
         if (window.confirm(`Delete "${title}"? It will be moved to _trash/.`)) {
-          deleteNote(selectedId);
+          void deleteNote(selectedId);
         }
         return;
       }

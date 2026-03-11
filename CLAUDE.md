@@ -98,7 +98,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Background file sync (watcher detects external changes, SSE updates, note list refresh)
 - [x] Case-insensitive search fix (Flexsearch limit increased for common-word queries)
 - [ ] Asset serving (GET /assets/:filename)
-- [ ] Add linting / code analysis
+- [x] Add linting / code analysis
 - [ ] Lightweight service monitoring
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)

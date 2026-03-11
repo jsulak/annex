@@ -73,7 +73,7 @@ export default function SettingsPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiFetch('/api/v1/config');
         if (res.ok && !cancelled) {
@@ -105,7 +105,7 @@ export default function SettingsPanel() {
   // Fetch sync status on mount
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       const status = await getSyncStatus();
       if (cancelled) return;
       if (!status.available) {
@@ -138,7 +138,7 @@ export default function SettingsPanel() {
         setConnectionStatus('disconnected');
       }
     };
-    check();
+    void check();
     pollRef.current = setInterval(check, 10_000);
     return () => clearInterval(pollRef.current);
   }, [syncAvailable, existingDevice]);
@@ -166,7 +166,7 @@ export default function SettingsPanel() {
   };
 
   const handleCopyDeviceId = () => {
-    navigator.clipboard.writeText(vpsDeviceId);
+    void navigator.clipboard.writeText(vpsDeviceId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

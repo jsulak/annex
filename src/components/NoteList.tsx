@@ -73,7 +73,7 @@ export default function NoteList() {
         const next = focusIndex === null ? 0 : Math.min(focusIndex + 1, displayNotes.length - 1);
         setFocusIndex(next);
         scrollIntoView(next);
-        selectNote(displayNotes[next].id);
+        void selectNote(displayNotes[next].id);
       } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
         // At the top of the list, return focus to the search input
@@ -88,12 +88,12 @@ export default function NoteList() {
         const next = Math.max((focusIndex ?? 0) - 1, 0);
         setFocusIndex(next);
         scrollIntoView(next);
-        selectNote(displayNotes[next].id);
+        void selectNote(displayNotes[next].id);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const idx = focusIndex ?? 0;
         if (displayNotes[idx]) {
-          selectNote(displayNotes[idx].id);
+          void selectNote(displayNotes[idx].id);
         }
       }
     },
@@ -107,7 +107,7 @@ export default function NoteList() {
     if (clickingRef.current) return;
     if (focusIndex === null && displayNotes.length > 0) {
       setFocusIndex(0);
-      selectNote(displayNotes[0].id);
+      void selectNote(displayNotes[0].id);
     }
   }, [focusIndex, displayNotes, selectNote]);
 
@@ -206,7 +206,7 @@ export default function NoteList() {
             else itemRefs.current.delete(index);
           }}
           onClick={() => {
-            selectNote(note.id);
+            void selectNote(note.id);
             setFocusIndex(index);
           }}
           onContextMenu={(e) => handleContextMenu(e, note)}
@@ -234,7 +234,7 @@ export default function NoteList() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  handleRename();
+                  void handleRename();
                 } else if (e.key === 'Escape') {
                   e.preventDefault();
                   setRenaming(null);
