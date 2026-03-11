@@ -50,6 +50,11 @@ export function addToIndex(note: StoredNote): void {
   flexIndex.update(note.id, `${note.filename} ${note.title} ${note.body}`);
 }
 
+/** Return the number of notes currently in the index. */
+export function getIndexSize(): number {
+  return noteStore.size;
+}
+
 /** Remove a note from the index. */
 export function removeFromIndex(id: string): void {
   noteStore.delete(id);

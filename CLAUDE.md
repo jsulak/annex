@@ -99,7 +99,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Case-insensitive search fix (Flexsearch limit increased for common-word queries)
 - [ ] Asset serving (GET /assets/:filename)
 - [x] Add linting / code analysis
-- [ ] Lightweight service monitoring
+- [x] Lightweight service monitoring
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)
 - [x] Polish (keyboard help overlay, error states, responsive layout)
@@ -112,6 +112,7 @@ Use test-driven development for any new feature or bugfix:
 - **Frontend**: Write Playwright E2E tests (`e2e/*.spec.ts`) for UI behavior. Run with `npm run test:e2e`.
 - Write the failing test, then implement the fix/feature, then verify the test passes.
 - Choose the appropriate test level: vitest for API/logic, Playwright for UI interactions.
+- **Always run the linter** (`npm run lint`) in addition to tests after making any change. Fix all warnings before considering a task complete.
 
 ## Standing Instructions
 
