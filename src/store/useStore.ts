@@ -57,6 +57,7 @@ interface AppState {
   deselectNote: () => void;
   updateEtag: (etag: string) => void;
   updateNoteInList: (id: string, modifiedAt: string, title: string, snippet: string, tags: string[], links: string[]) => void;
+  renameNoteInList: (id: string, filename: string, title: string) => void;
   createNote: (title?: string) => Promise<void>;
   deleteNote: (id: string) => Promise<boolean>;
   upsertNoteFromSSE: (id: string) => Promise<void>;
@@ -189,6 +190,15 @@ export const useStore = create<AppState>((set, get) => ({
       notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links };
       // Re-sort by last modified so edited note moves to top
       notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+      return { notes };
+    }),
+
+  renameNoteInList: (id, filename, title) =>
+    set((s) => {
+      const idx = s.notes.findIndex((n) => n.id === id);
+      if (idx < 0) return s;
+      const notes = [...s.notes];
+      notes[idx] = { ...notes[idx], filename, title };
       return { notes };
     }),
 

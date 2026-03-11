@@ -189,6 +189,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     }
 
     const targetFilename = newFilename.endsWith('.md') ? newFilename : newFilename + '.md';
+    suppressPath(path.join(notesDir, oldFilename));
     suppressPath(path.join(notesDir, targetFilename));
     await renameNoteFile(notesDir, oldFilename, targetFilename);
 

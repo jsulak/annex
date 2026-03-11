@@ -40,6 +40,33 @@ test.describe('Note list context menu', () => {
     await expect(renameInput).toHaveValue('202401151432 Sample Note');
   });
 
+  test('Rename keeps note visible in list with new name', async ({ page, request }) => {
+    // Create a throwaway note via API
+    const id = '209901010000';
+    await request.put(`/api/v1/notes/${id}`, { data: { body: 'Rename test' } });
+    await page.reload();
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    const noteItem = page.locator('#note-list').getByText(id, { exact: false });
+    await expect(noteItem).toBeVisible({ timeout: 5_000 });
+
+    // Right-click and rename
+    await noteItem.click({ button: 'right' });
+    await page.locator('[data-testid="context-menu"]').getByText('Rename').click();
+
+    const renameInput = page.locator('#note-list input[type="text"]');
+    await expect(renameInput).toBeVisible({ timeout: 3_000 });
+    await renameInput.fill(`${id} Renamed Note`);
+    await renameInput.press('Enter');
+
+    // Note must still appear in the list with the new name — not disappear
+    await expect(page.locator('#note-list').getByText('Renamed Note', { exact: false })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText(id, { exact: false })).toBeVisible({ timeout: 5_000 });
+
+    // Clean up
+    await request.delete(`/api/v1/notes/${id}`);
+  });
+
   test('Delete from context menu removes note', async ({ page, request }) => {
     // Create a throwaway note via API
     const id = '209901030000';
