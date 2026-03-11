@@ -59,6 +59,20 @@ test.describe('URL-based navigation', () => {
     await request.delete('/api/v1/notes/PlainNote');
   });
 
+  test('direct URL navigation works with percent-encoded note ID', async ({ page, request }) => {
+    // Create a note with spaces in the filename (no timestamp prefix)
+    await request.put('/api/v1/notes/Spaced Note', { data: { body: 'spaced note content', filename: 'Spaced Note.md' } });
+
+    // Navigate directly using percent-encoded URL (as a browser would)
+    await page.goto('/note/Spaced%20Note');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.cm-content')).toContainText('spaced note content', { timeout: 5_000 });
+
+    // Clean up
+    await request.delete('/api/v1/notes/Spaced Note');
+  });
+
   test('deselecting note returns URL to /', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });

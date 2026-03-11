@@ -49,7 +49,7 @@ export default function AppLayout() {
       // On initial load, check URL for /note/:id
       const match = window.location.pathname.match(/^\/note\/(.+)$/);
       if (match) {
-        selectNote(match[1]);
+        selectNote(decodeURIComponent(match[1]));
       }
     });
     fetchSettings();
