@@ -61,8 +61,16 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string) {
     return reply.send({ ok: true });
   });
 
-  // Change password route
-  app.post('/api/v1/auth/change-password', async (request: FastifyRequest, reply: FastifyReply) => {
+  // Change password route (rate limited)
+  app.post('/api/v1/auth/change-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: 15 * 60 * 1000,
+        keyGenerator: (req: FastifyRequest) => req.ip,
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.session.get('authenticated')) {
       return reply.status(401).send({ error: 'Unauthorized' });
     }

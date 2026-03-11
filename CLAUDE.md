@@ -61,6 +61,22 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
 - [x] Make block quotes plain text, not italic.
 
+### Production Hardening
+- [x] Rate limiting on login and password change endpoints (@fastify/rate-limit)
+- [ ] Account lockout after N failed login attempts (e.g., 5 failures = 15 min cooldown)
+- [x] Graceful shutdown (SIGTERM/SIGINT handler to flush writes, close Fastify cleanly)
+- [ ] Automated backups (cron snapshot of NOTES_DIR — Syncthing is not a backup)
+- [x] Atomic file writes (write to temp file then rename, prevent corruption on crash)
+- [ ] CSRF protection (token-based, defense in depth beyond SameSite cookie)
+- [ ] npm audit in CI or pre-deploy check
+- [ ] Structured log rotation (pino-roll or logrotate, prevent disk fill)
+- [ ] External uptime monitor (UptimeRobot/Healthchecks.io hitting /api/v1/health)
+- [ ] Disk space monitoring and alerting
+- [ ] Response compression (@fastify/compress, gzip/brotli)
+- [ ] Static asset cache headers (long Cache-Control for hashed Vite assets)
+- [ ] PM2 config hardening (max_restarts, restart_delay, max_memory_restart)
+- [ ] Post-deploy smoke test (hit health endpoint after pm2 restart)
+
 
 ## Current Status
 [ Update this section as features are completed ]
@@ -103,6 +119,10 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)
 - [x] Syncthing integration (Ansible provisioning, backend proxy API, Settings panel UI)
 - [x] Polish (keyboard help overlay, error states, responsive layout)
+- [x] Rate limiting on auth endpoints (login + change-password)
+- [x] Graceful shutdown (SIGTERM/SIGINT → close Fastify, stop watcher)
+- [x] Atomic file writes (temp file + rename)
+- [x] PM2 config hardening (max_memory_restart, kill_timeout)
 
 
 ## Testing

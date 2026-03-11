@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import path from 'node:path';
 
 /** Resolve a filename within notesDir and assert it stays inside. */
@@ -27,11 +28,13 @@ export async function readNoteFile(notesDir: string, filename: string): Promise<
   return fs.readFile(filePath, 'utf-8');
 }
 
-/** Write a note file with LF line endings. */
+/** Write a note file with LF line endings (atomic: write to temp then rename). */
 export async function writeNoteFile(notesDir: string, filename: string, content: string): Promise<void> {
   const filePath = safePath(notesDir, filename);
   const normalized = content.replace(/\r\n/g, '\n');
-  await fs.writeFile(filePath, normalized, 'utf-8');
+  const tmpPath = filePath + '.tmp.' + crypto.randomBytes(4).toString('hex');
+  await fs.writeFile(tmpPath, normalized, 'utf-8');
+  await fs.rename(tmpPath, filePath);
 }
 
 /** Move a note to _trash/ (create if needed). Never unlinks. */

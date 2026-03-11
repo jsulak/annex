@@ -115,6 +115,22 @@ describe('writeNoteFile and readNoteFile', () => {
     const content = await readNoteFile(tmpDir, 'empty.md');
     expect(content).toBe('');
   });
+
+  test('atomic write leaves no temp files', async () => {
+    await writeNoteFile(tmpDir, 'atomic.md', 'test content');
+    const files = await fsp.readdir(tmpDir);
+    const tmpFiles = files.filter((f) => f.includes('.tmp.'));
+    expect(tmpFiles).toHaveLength(0);
+    const content = await readNoteFile(tmpDir, 'atomic.md');
+    expect(content).toBe('test content');
+  });
+
+  test('atomic write overwrites existing file', async () => {
+    await writeNoteFile(tmpDir, 'overwrite.md', 'version 1');
+    await writeNoteFile(tmpDir, 'overwrite.md', 'version 2');
+    const content = await readNoteFile(tmpDir, 'overwrite.md');
+    expect(content).toBe('version 2');
+  });
 });
 
 describe('findFileById', () => {
