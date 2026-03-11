@@ -56,10 +56,10 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Bugfix - Searching for "a man needs to be needed" does not find a note with "A man needs to be needed" in the plaintext "title" metadata in a document.
 - [x] Add an option to increase the line spacing in edit view.
 - [ ] When using a keyboard shortcut for text formatting, and you are inside a formatted region, it should toggle the formatting.
-- [ ] Need to fix the file creation - ask me when you get to it.
+- [x] Need to fix the file creation - ask me when you get to it.
 - [x] When renaming a file, it disapears from the file list.
-- [ ] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
-
+- [x] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
+- [ ] Make block quotes plain text, not italic.
 
 
 ## Current Status

@@ -47,7 +47,7 @@ export default function AppLayout() {
   useEffect(() => {
     fetchNotes().then(() => {
       // On initial load, check URL for /note/:id
-      const match = window.location.pathname.match(/^\/note\/(\d+)$/);
+      const match = window.location.pathname.match(/^\/note\/(.+)$/);
       if (match) {
         selectNote(match[1]);
       }
