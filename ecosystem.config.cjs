@@ -15,6 +15,8 @@ module.exports = {
       },
       restart_delay: 3000,
       max_restarts: 10,
+      max_memory_restart: '256M',
+      kill_timeout: 5000,
     },
   ],
 };

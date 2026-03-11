@@ -14,7 +14,7 @@ import { registerEvents } from './routes/events.js';
 import { registerConfig } from './routes/config.js';
 import { registerSync } from './routes/sync.js';
 import { buildIndex, getIndexSize } from './lib/searchIndex.js';
-import { startWatcher } from './lib/watcher.js';
+import { startWatcher, stopWatcher } from './lib/watcher.js';
 
 function requireEnv(name: string, minLength = 1): string {
   const value = process.env[name];
@@ -158,6 +158,30 @@ async function start() {
   await app.listen({ port: PORT, host });
   console.log(`Annex server listening on port ${PORT}`);
   console.log(`Notes directory: ${resolvedNotesDir}`);
+
+  // Graceful shutdown
+  let shuttingDown = false;
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`${signal} received — shutting down gracefully...`);
+    try {
+      await app.close();
+      console.log('Fastify server closed');
+    } catch (err) {
+      console.error('Error closing Fastify:', err);
+    }
+    try {
+      await stopWatcher();
+    } catch (err) {
+      console.error('Error stopping watcher:', err);
+    }
+    console.log('Shutdown complete');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 start().catch((err) => {
