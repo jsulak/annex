@@ -56,6 +56,7 @@ deploy:
 push:
 	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
+	npm audit --audit-level=high
 	npm run build
 	rsync -az --delete \
 		--exclude=node_modules --exclude=.git --exclude=.env \
