@@ -381,7 +381,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       set({ historyIndex: newIndex, _navigatingHistory: true });
-      get().selectNote(history[newIndex]);
+      void get().selectNote(history[newIndex]);
     }
   },
 
@@ -390,7 +390,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       set({ historyIndex: newIndex, _navigatingHistory: true });
-      get().selectNote(history[newIndex]);
+      void get().selectNote(history[newIndex]);
     }
   },
 

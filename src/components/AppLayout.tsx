@@ -45,14 +45,14 @@ export default function AppLayout() {
   const dragging = useRef(false);
 
   useEffect(() => {
-    fetchNotes().then(() => {
+    void fetchNotes().then(() => {
       // On initial load, check URL for /note/:id
       const match = window.location.pathname.match(/^\/note\/(.+)$/);
       if (match) {
-        selectNote(decodeURIComponent(match[1]));
+        void selectNote(decodeURIComponent(match[1]));
       }
     });
-    fetchSettings();
+    void fetchSettings();
   }, [fetchNotes, fetchSettings, selectNote]);
 
   // Handle browser back/forward
@@ -62,7 +62,7 @@ export default function AppLayout() {
       if (noteId) {
         // Set _navigatingHistory so selectNote doesn't push to browser history
         useStore.setState({ _navigatingHistory: true });
-        useStore.getState().selectNote(noteId);
+        void useStore.getState().selectNote(noteId);
       } else {
         useStore.setState({ selectedId: null, selectedNote: null });
       }
@@ -155,7 +155,7 @@ export default function AppLayout() {
         visible={newNoteDialogVisible}
         onConfirm={(title) => {
           setNewNoteDialogVisible(false);
-          createNote(title);
+          void createNote(title);
         }}
         onCancel={() => setNewNoteDialogVisible(false)}
       />

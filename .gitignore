@@ -19,3 +19,4 @@ terraform/terraform.tfvars
 deploy.sh
 dev.sh
 
+.DS_Store

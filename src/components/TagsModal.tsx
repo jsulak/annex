@@ -36,7 +36,7 @@ export default function TagsModal() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await apiFetch('/api/v1/tags');
         if (res.ok && !cancelled) {
@@ -68,7 +68,7 @@ export default function TagsModal() {
 
   const handleSelect = useCallback(
     (tag: string) => {
-      search(`#${tag}`);
+      void search(`#${tag}`);
       close();
     },
     [search, close],

@@ -14,7 +14,7 @@ export default function BacklinksPanel({ selectedId }: { selectedId: string }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    (async () => {
+    void (async () => {
       try {
         const res = await apiFetch(
           `/api/v1/notes/${encodeURIComponent(selectedId)}/backlinks`,

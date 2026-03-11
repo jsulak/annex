@@ -130,7 +130,7 @@ export function useAutoSave(
     debounceTimerRef.current = setTimeout(() => {
       const id = currentNoteIdRef.current;
       if (id && pendingContentRef.current !== null) {
-        doSave(id, pendingContentRef.current, currentEtagRef.current);
+        void doSave(id, pendingContentRef.current, currentEtagRef.current);
       }
     }, AUTO_SAVE_DELAY);
   }, [clearDebounce, clearSavedTimer, doSave]);
@@ -141,7 +141,7 @@ export function useAutoSave(
 
     if (prevId !== noteId && prevId) {
       // Flush save for previous note
-      flushSave(prevId);
+      void flushSave(prevId);
     }
 
     currentNoteIdRef.current = noteId;
@@ -159,7 +159,7 @@ export function useAutoSave(
       const id = currentNoteIdRef.current;
       if (id && pendingContentRef.current !== null) {
         // Fire-and-forget save on unmount
-        doSave(id, pendingContentRef.current, currentEtagRef.current);
+        void doSave(id, pendingContentRef.current, currentEtagRef.current);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

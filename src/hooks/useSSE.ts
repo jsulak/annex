@@ -25,13 +25,13 @@ export function useSSE() {
 
       es.addEventListener('note:created', (e) => {
         const { id } = JSON.parse(e.data);
-        upsertNoteFromSSE(id);
+        void upsertNoteFromSSE(id);
       });
 
       es.addEventListener('note:modified', (e) => {
         const { id } = JSON.parse(e.data);
-        upsertNoteFromSSE(id);
-        reloadSelectedNote(id);
+        void upsertNoteFromSSE(id);
+        void reloadSelectedNote(id);
       });
 
       es.addEventListener('note:deleted', (e) => {
@@ -40,7 +40,7 @@ export function useSSE() {
       });
 
       es.addEventListener('index:rebuilt', () => {
-        fetchNotes();
+        void fetchNotes();
       });
 
       es.onerror = () => {

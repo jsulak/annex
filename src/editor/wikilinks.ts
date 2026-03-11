@@ -1,6 +1,5 @@
 import {
   Decoration,
-  type DecorationSet,
   EditorView,
   MatchDecorator,
   ViewPlugin,

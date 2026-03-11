@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { createExtensions, type EditorCallbacks } from '../editor/setup.js';
@@ -64,17 +64,17 @@ export default function CodeMirrorEditor({
   }, []);
 
   // Stable completion providers that delegate to the latest ref
-  const stableProviders: CompletionProviders = {
+  const stableProviders: CompletionProviders = useMemo(() => ({
     getNotes: () => completionProvidersRef.current?.getNotes() ?? [],
     getTags: () => completionProvidersRef.current?.getTags() ?? [],
-  };
+  }), []);
 
   const buildCallbacks = useCallback((): EditorCallbacks => ({
     onUpdate: stableOnUpdate,
     onNavigate: stableOnNavigate,
     onSearchTag: stableOnSearchTag,
     completionProviders: stableProviders,
-  }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag]);
+  }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag, stableProviders]);
 
   // Create editor view once on mount
   useEffect(() => {

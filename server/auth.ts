@@ -11,7 +11,7 @@ declare module 'fastify' {
   }
 }
 
-export async function registerAuth(app: FastifyInstance, notesDir: string) {
+export async function registerAuth(app: FastifyInstance, _notesDir: string) {
   // Rate limiting on login endpoint
   await app.register(rateLimit, {
     max: 5,
@@ -57,7 +57,7 @@ export async function registerAuth(app: FastifyInstance, notesDir: string) {
 
   // Logout route
   app.post('/api/v1/auth/logout', async (request: FastifyRequest, reply: FastifyReply) => {
-    request.session.destroy();
+    void request.session.destroy();
     return reply.send({ ok: true });
   });
 
@@ -90,7 +90,7 @@ export async function registerAuth(app: FastifyInstance, notesDir: string) {
     await writeConfig(config);
 
     // Destroy current session (user must re-login)
-    request.session.destroy();
+    void request.session.destroy();
     return { ok: true };
   });
 
