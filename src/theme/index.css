@@ -222,7 +222,7 @@ body {
     min-height: 0 !important;
   }
 
-  .app-panel-editor:not(.hidden-mobile) ~ .app-panel-list {
+  .app-panel-editor.hidden-mobile {
     display: none !important;
   }
 

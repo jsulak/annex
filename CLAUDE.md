@@ -60,22 +60,29 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] When renaming a file, it disapears from the file list.
 - [x] Bugfix: URL scheme does not work for notes with a filename that does not have an id in front of it
 - [x] Make block quotes plain text, not italic.
+- [x] Update insert hyperlinks to give title as well, for example, if we are linking to the file 202501010101 Test note.md" it should create the link text Test note 202501010101.
+- [x] control-n should not create a new file - I want to use keyboard navigation instead
+- [x] File list should not scroll left and right on iphone
+- [x] iphone editing: does not include autoxorrect, etc and should
+- [ ] Persist session through service restart
+
 
 ### Production Hardening
 - [x] Rate limiting on login and password change endpoints (@fastify/rate-limit)
-- [ ] Account lockout after N failed login attempts (e.g., 5 failures = 15 min cooldown)
+- [x] Account lockout after N failed login attempts (e.g., 5 failures = 15 min cooldown)
 - [x] Graceful shutdown (SIGTERM/SIGINT handler to flush writes, close Fastify cleanly)
-- [ ] Automated backups (cron snapshot of NOTES_DIR — Syncthing is not a backup)
+- [x] Automated backups (cron snapshot of NOTES_DIR — Syncthing is not a backup)
 - [x] Atomic file writes (write to temp file then rename, prevent corruption on crash)
-- [ ] CSRF protection (token-based, defense in depth beyond SameSite cookie)
+- [x] CSRF protection (token-based, defense in depth beyond SameSite cookie)
 - [x] npm audit in CI or pre-deploy check
-- [ ] Structured log rotation (pino-roll or logrotate, prevent disk fill)
-- [ ] External uptime monitor (UptimeRobot/Healthchecks.io hitting /api/v1/health)
-- [ ] Disk space monitoring and alerting
+- [x] Structured log rotation (logrotate config via Ansible for PM2 logs, daily/14-day retention)
+- [ ] External uptime monitor (UptimeRobot/Healthchecks.io hitting /api/v1/health) — manual setup required: sign up and monitor https://your-domain/api/v1/health
+- [x] Disk space monitoring and alerting (health endpoint reports disk stats; hourly server-side warn log when free < LOW_DISK_WARN_PCT)
 - [x] Response compression (@fastify/compress, gzip/brotli)
 - [x] Static asset cache headers (long Cache-Control for hashed Vite assets)
-- [ ] PM2 config hardening (max_restarts, restart_delay, max_memory_restart)
-- [ ] Post-deploy smoke test (hit health endpoint after pm2 restart)
+- [x] PM2 config hardening (max_restarts, restart_delay, max_memory_restart, kill_timeout)
+- [x] Post-deploy smoke test (Ansible asserts health response ok + public URL check when domain set)
+- [x] Implement Snyk — using GitHub integration (snyk.io → connect repo); monitors dependencies, opens auto-fix PRs on new CVEs
 
 
 ## Current Status

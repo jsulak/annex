@@ -77,7 +77,7 @@
         cmd: pm2 save
       changed_when: false
 
-    - name: Wait for app to be healthy
+    - name: Wait for app to be healthy (localhost)
       ansible.builtin.uri:
         url: "http://localhost:{{ app_port }}/api/v1/health"
         return_content: true
@@ -85,3 +85,18 @@
       until: health.status == 200
       retries: 10
       delay: 2
+
+    - name: Smoke test — verify health response is ok
+      ansible.builtin.assert:
+        that:
+          - health.json.status == 'ok'
+        fail_msg: "Health check returned unexpected body: {{ health.content }}"
+        quiet: true
+
+    - name: Smoke test — verify public URL (only when domain is set)
+      ansible.builtin.uri:
+        url: "https://{{ domain }}/api/v1/health"
+        return_content: true
+        status_code: 200
+      register: public_health
+      when: domain | default('') | length > 0

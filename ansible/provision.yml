@@ -274,6 +274,15 @@
         port: "21027"
         proto: udp
 
+    # ── Log rotation ─────────────────────────────────────────
+    - name: Deploy logrotate config for annex PM2 logs
+      ansible.builtin.template:
+        src: templates/logrotate-annex.j2
+        dest: /etc/logrotate.d/annex
+        owner: root
+        group: root
+        mode: "0644"
+
     # ── PM2 startup ──────────────────────────────────────────
     - name: Check if PM2 startup is configured
       ansible.builtin.stat:

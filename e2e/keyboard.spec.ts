@@ -93,6 +93,20 @@ test.describe('Keyboard shortcuts', () => {
     await expect(page.locator('#search-input')).toBeFocused();
   });
 
+  test('Cmd+N opens new note dialog', async ({ page }) => {
+    await page.keyboard.press('Meta+n');
+    await expect(page.locator('input[placeholder="Note title..."]')).toBeVisible({ timeout: 3_000 });
+    await page.keyboard.press('Escape');
+    await expect(page.locator('input[placeholder="Note title..."]')).not.toBeVisible();
+  });
+
+  test('Ctrl+N does NOT open new note dialog', async ({ page }) => {
+    await page.keyboard.press('Control+n');
+    // Dialog should NOT appear after a brief wait
+    await page.waitForTimeout(300);
+    await expect(page.locator('input[placeholder="Note title..."]')).not.toBeVisible();
+  });
+
   test('Cmd+Backspace deletes current note', async ({ page }) => {
     // Create a throwaway note via dialog
     await page.locator('button[title="New note"]').click();

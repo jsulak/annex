@@ -82,10 +82,7 @@ describe('health check', () => {
 // Logout runs last since it destroys the session used by other tests
 describe('logout', () => {
   test('logout endpoint returns ok', async () => {
-    const res = await fetch(`${ctx.baseUrl}/api/v1/auth/logout`, {
-      method: 'POST',
-      headers: { Cookie: ctx.cookie },
-    });
+    const res = await http.post('/api/v1/auth/logout', {});
     expect(res.ok).toBe(true);
     expect((await res.json()).ok).toBe(true);
   });

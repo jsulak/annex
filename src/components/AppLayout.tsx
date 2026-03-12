@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore.js';
 import { useSSE } from '../hooks/useSSE.js';
 import { useNoteNavigation } from '../hooks/useNoteNavigation.js';
+import { fetchCsrfToken } from '../api/client.js';
 import Toolbar from './Toolbar.js';
 import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
@@ -43,6 +44,10 @@ export default function AppLayout() {
   useSSE();
   useNoteNavigation();
   const dragging = useRef(false);
+
+  useEffect(() => {
+    void fetchCsrfToken();
+  }, []);
 
   useEffect(() => {
     void fetchNotes().then(() => {
@@ -136,7 +141,7 @@ export default function AppLayout() {
 
         {/* Right panel — editor */}
         <div
-          className="app-panel-editor"
+          className={`app-panel-editor${!selectedId ? ' hidden-mobile' : ''}`}
           style={{
             flex: 1,
             display: 'flex',

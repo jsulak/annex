@@ -4,6 +4,13 @@ import bcrypt from 'bcrypt';
 import { readConfig, writeConfig } from './lib/config.js';
 
 const BCRYPT_ROUNDS = 12;
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+interface LockoutEntry {
+  failures: number;
+  lockedUntil?: number;
+}
 
 declare module 'fastify' {
   interface Session {
@@ -11,15 +18,55 @@ declare module 'fastify' {
   }
 }
 
-export async function registerAuth(app: FastifyInstance, _notesDir: string) {
-  // Rate limiting on login endpoint
+export interface AuthOptions {
+  /** Max login requests per timeWindow before rate-limiting. Default: 20. */
+  rateLimitMax?: number;
+  /** Artificial delay (ms) on wrong password. Default: 1000. */
+  loginDelayMs?: number;
+}
+
+export async function registerAuth(app: FastifyInstance, _notesDir: string, opts: AuthOptions = {}) {
+  const rateLimitMax = opts.rateLimitMax ?? 20;
+  const loginDelayMs = opts.loginDelayMs ?? 1000;
+
+  // Per-instance lockout state (not shared across server instances)
+  const lockouts = new Map<string, LockoutEntry>();
+
+  function getLockout(ip: string): LockoutEntry {
+    const entry = lockouts.get(ip) ?? { failures: 0 };
+    // Auto-expire
+    if (entry.lockedUntil && Date.now() >= entry.lockedUntil) {
+      lockouts.delete(ip);
+      return { failures: 0 };
+    }
+    return entry;
+  }
+
+  function isLockedOut(ip: string): boolean {
+    const entry = getLockout(ip);
+    return !!(entry.lockedUntil && Date.now() < entry.lockedUntil);
+  }
+
+  function recordFailure(ip: string): void {
+    const entry = getLockout(ip);
+    entry.failures += 1;
+    if (entry.failures >= LOCKOUT_THRESHOLD) {
+      entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    }
+    lockouts.set(ip, entry);
+  }
+
+  function resetLockout(ip: string): void {
+    lockouts.delete(ip);
+  }
+
+  // Rate limiting — a separate backstop against volumetric abuse
   await app.register(rateLimit, {
-    max: 5,
-    timeWindow: 15 * 60 * 1000, // 15 minutes
+    max: rateLimitMax,
+    timeWindow: 15 * 60 * 1000,
     keyGenerator: (req) => req.ip,
     hook: 'preHandler',
     allowList: [],
-    // Only apply to login route via route-level config
     global: false,
   });
 
@@ -27,12 +74,21 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string) {
   app.post('/api/v1/auth/login', {
     config: {
       rateLimit: {
-        max: 5,
+        max: rateLimitMax,
         timeWindow: 15 * 60 * 1000,
         keyGenerator: (req: FastifyRequest) => req.ip,
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const ip = request.ip;
+
+    // Account lockout check (before bcrypt to avoid wasted work)
+    if (isLockedOut(ip)) {
+      return reply.status(429).send({
+        error: 'Too many failed login attempts. Account locked for 15 minutes.',
+      });
+    }
+
     const { password } = request.body as { password: string };
 
     if (!password || typeof password !== 'string') {
@@ -46,11 +102,14 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string) {
 
     const valid = await bcrypt.compare(password, config.passwordHash);
     if (!valid) {
-      // Artificial delay to slow brute-force attempts
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      recordFailure(ip);
+      if (loginDelayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, loginDelayMs));
+      }
       return reply.status(401).send({ error: 'Incorrect password' });
     }
 
+    resetLockout(ip);
     request.session.set('authenticated', true);
     return { ok: true };
   });
@@ -65,7 +124,7 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string) {
   app.post('/api/v1/auth/change-password', {
     config: {
       rateLimit: {
-        max: 5,
+        max: rateLimitMax,
         timeWindow: 15 * 60 * 1000,
         keyGenerator: (req: FastifyRequest) => req.ip,
       },
