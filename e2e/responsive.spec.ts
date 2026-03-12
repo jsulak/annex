@@ -89,6 +89,35 @@ test.describe('Responsive layout', () => {
     await expect(page.locator('.app-divider')).not.toBeVisible();
   });
 
+  test('note list has overflow-x hidden to prevent iOS horizontal scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
+
+    const overflowX = await page.evaluate(() => {
+      const el = document.getElementById('note-list');
+      return el ? window.getComputedStyle(el).overflowX : '';
+    });
+
+    expect(overflowX).toBe('hidden');
+  });
+
+  test('editor contenteditable has autocorrect enabled', async ({ page }) => {
+    await page.setViewportSize({ width: 1200, height: 800 });
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    await page.locator('#note-list').getByText('202401151432 Sample Note').click();
+    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+
+    const autocorrect = await page.locator('.cm-content').getAttribute('autocorrect');
+    expect(autocorrect).toBe('on');
+
+    const autocapitalize = await page.locator('.cm-content').getAttribute('autocapitalize');
+    expect(autocapitalize).toBeTruthy();
+  });
+
   test('desktop divider is visible', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await page.goto('/');
@@ -105,17 +134,27 @@ test.describe('Responsive layout', () => {
     await expect(page.locator('.toolbar-help-btn')).not.toBeVisible();
   });
 
-  test('mobile note list fills available space', async ({ page }) => {
+  test('mobile note list fills nearly all available space when no note selected', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
     await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
 
-    // Note list panel should take substantial portion of viewport height
+    // Note list panel should fill almost all vertical space below the toolbar
+    // (not just 50% — editor should be hidden when no note is selected)
     const listPanel = page.locator('.app-panel-list');
     const box = await listPanel.boundingBox();
     expect(box).toBeTruthy();
-    // Should be at least 50% of viewport height (667 * 0.5 = 333)
-    expect(box!.height).toBeGreaterThan(300);
+    // Should be at least 80% of viewport height (667 * 0.8 ≈ 534)
+    expect(box!.height).toBeGreaterThan(500);
+  });
+
+  test('mobile editor is hidden when no note selected', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    // With no note selected, the editor panel should not be visible
+    await expect(page.locator('.app-panel-editor')).not.toBeVisible();
   });
 });

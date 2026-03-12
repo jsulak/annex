@@ -48,4 +48,30 @@ test.describe('Wiki-link autocomplete shows filename', () => {
     const h1Option = options.find(o => o.includes('Completely Different H1'));
     expect(h1Option).toBeUndefined();
   });
+
+  test('selecting autocomplete inserts "Title ID" link format', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+
+    // Open any note to get an editor
+    await page.locator('#note-list').getByText('202401151432 Sample Note').click();
+    await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+
+    // Type [[ to trigger autocomplete
+    await page.locator('.cm-content').click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('[[My File');
+
+    // Wait for autocomplete dropdown
+    const autocomplete = page.locator('.cm-tooltip-autocomplete');
+    await expect(autocomplete).toBeVisible({ timeout: 5_000 });
+
+    // Click the specific "My File Title" option to select it
+    await autocomplete.locator('.cm-completionLabel', { hasText: 'My File Title' }).first().click();
+
+    // The inserted text should be "Title [[ID]]" format: title outside, ID inside brackets
+    const content = await page.locator('.cm-content').textContent();
+    expect(content).toContain('My File Title [[209901020000]]');
+  });
 });

@@ -30,7 +30,9 @@ export function idToCreatedAt(id: string): string {
   const hour = id.slice(8, 10);
   const minute = id.slice(10, 12);
   const second = id.length >= 14 ? id.slice(12, 14) : '00';
-  return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`).toISOString();
+  const d = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+  if (isNaN(d.getTime())) return '';
+  return d.toISOString();
 }
 
 /** First `# heading` line, or title portion of filename (without ID prefix and .md). */

@@ -82,6 +82,11 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     zettelTheme,
     zettelHighlight,
     EditorView.lineWrapping,
+    EditorView.contentAttributes.of({
+      autocorrect: 'on',
+      autocapitalize: 'sentences',
+      spellcheck: 'true',
+    }),
     history(),
     closeBrackets(),
     formattingKeymap(),

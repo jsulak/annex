@@ -196,7 +196,7 @@ export default function NoteList() {
       onFocus={handleFocus}
       onMouseDown={() => { clickingRef.current = true; }}
       onMouseUp={() => { clickingRef.current = false; }}
-      style={{ overflowY: 'auto', flex: 1, outline: 'none' }}
+      style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, outline: 'none' }}
     >
       {displayNotes.map((note, index) => (
         <div

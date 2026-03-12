@@ -34,18 +34,23 @@ function wikiLinkCompletion(providers: CompletionProviders) {
       )
       .slice(0, 30)
       .map((n) => {
-        const linkTarget = n.id || n.title;
         // Display filename (strip .md extension) as the label
         const displayName = n.filename.replace(/\.md$/i, '');
+        // Extract title part by stripping leading timestamp ID from filename
+        const titleOnly = displayName.replace(/^\d{12,14}\s*/, '').trim();
+        // Format: "Title [[ID]]" — title outside the brackets for readability
+        const apply = titleOnly && n.id
+          ? `${titleOnly} [[${n.id}]]`
+          : `[[${n.id || titleOnly || displayName}]]`;
         return {
           label: displayName || n.id,
           detail: n.id !== displayName ? n.id : undefined,
-          apply: `${linkTarget}]]`,
+          apply,
         };
       });
 
-    // Replace from after [[ through any existing ]]
-    const from = match.from + 2;
+    // Replace from the [[ (inclusive) through any existing ]]
+    const from = match.from;
     const to = context.pos + closingToConsume;
 
     return {

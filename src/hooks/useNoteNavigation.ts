@@ -30,8 +30,8 @@ export function useNoteNavigation() {
         return;
       }
 
-      // Cmd+N — new note
-      if (e.key === 'n' && !e.shiftKey) {
+      // Cmd+N — new note (Mac Cmd only, not Ctrl+N)
+      if (e.key === 'n' && !e.shiftKey && e.metaKey) {
         e.preventDefault();
         setNewNoteDialogVisible(true);
         return;

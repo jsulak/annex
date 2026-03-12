@@ -1,0 +1,11 @@
+# Rotate PM2 logs for the annex app user
+/home/{{ app_user }}/.pm2/logs/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su {{ app_user }} {{ app_user }}
+}

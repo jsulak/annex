@@ -5,6 +5,7 @@ import os from 'node:os';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
+import csrf from '@fastify/csrf-protection';
 import { registerAuth } from '../server/auth.js';
 import { registerNotes } from '../server/routes/notes.js';
 import { registerSearch } from '../server/routes/search.js';
@@ -22,6 +23,7 @@ export interface TestContext {
   baseUrl: string;
   notesDir: string;
   cookie: string;
+  csrfToken: string;
   app: FastifyInstance;
 }
 
@@ -66,7 +68,16 @@ export async function startTestServer(): Promise<TestContext> {
     },
   });
 
-  await registerAuth(app, notesDir);
+  // CSRF protection (matches production setup)
+  await app.register(csrf, { sessionPlugin: '@fastify/session' });
+  const CSRF_MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+  app.addHook('preValidation', (request, reply, done) => {
+    if (!CSRF_MUTATING.has(request.method)) return done();
+    if (request.url === '/api/v1/auth/login') return done();
+    return app.csrfProtection(request, reply, done);
+  });
+
+  await registerAuth(app, notesDir, { loginDelayMs: 0, rateLimitMax: 100 });
   await registerNotes(app, notesDir);
   await registerSearch(app);
   await registerTags(app, notesDir);
@@ -75,6 +86,10 @@ export async function startTestServer(): Promise<TestContext> {
   await registerSync(app, '', notesDir);
 
   app.get('/api/v1/health', async () => ({ status: 'ok' }));
+  app.get('/api/v1/auth/csrf-token', async (_request, reply) => {
+    const token = await reply.generateCsrf();
+    return reply.send({ token });
+  });
 
   await buildIndex(notesDir);
   await startWatcher(notesDir);
@@ -90,7 +105,13 @@ export async function startTestServer(): Promise<TestContext> {
   const setCookie = loginRes.headers.get('set-cookie') ?? '';
   const cookie = setCookie.split(';')[0];
 
-  return { baseUrl: address, notesDir, cookie, app };
+  // Fetch CSRF token for use in mutating requests
+  const csrfRes = await fetch(`${address}/api/v1/auth/csrf-token`, {
+    headers: { Cookie: cookie },
+  });
+  const { token: csrfToken } = await csrfRes.json() as { token: string };
+
+  return { baseUrl: address, notesDir, cookie, csrfToken, app };
 }
 
 export async function stopTestServer(ctx: TestContext): Promise<void> {
@@ -99,7 +120,7 @@ export async function stopTestServer(ctx: TestContext): Promise<void> {
   await fsp.rm(ctx.notesDir, { recursive: true, force: true });
 }
 
-/** Typed fetch helper that includes auth cookie and JSON content-type. */
+/** Typed fetch helper that includes auth cookie, CSRF token, and JSON content-type. */
 export function api(ctx: TestContext) {
   const base = ctx.baseUrl;
   const headers = (extra?: Record<string, string>) => ({
@@ -115,21 +136,24 @@ export function api(ctx: TestContext) {
     put: (path: string, body: unknown, extraHeaders?: Record<string, string>) =>
       fetch(`${base}${path}`, {
         method: 'PUT',
-        headers: headers(extraHeaders),
+        headers: headers({ 'x-csrf-token': ctx.csrfToken, ...extraHeaders }),
         body: JSON.stringify(body),
       }),
 
     post: (path: string, body: unknown) =>
       fetch(`${base}${path}`, {
         method: 'POST',
-        headers: headers(),
+        headers: headers({ 'x-csrf-token': ctx.csrfToken }),
         body: JSON.stringify(body),
       }),
 
     delete: (path: string) =>
-      fetch(`${base}${path}`, { method: 'DELETE', headers: { Cookie: ctx.cookie } }),
+      fetch(`${base}${path}`, {
+        method: 'DELETE',
+        headers: { Cookie: ctx.cookie, 'x-csrf-token': ctx.csrfToken },
+      }),
 
-    /** Make a request without auth cookie. */
+    /** Make a request without auth cookie or CSRF token. */
     unauthed: (method: string, path: string, body?: unknown) =>
       fetch(`${base}${path}`, {
         method,
