@@ -2,13 +2,13 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import path from 'node:path';
 
+type Callback = (err?: Error | null) => void;
+
+// Minimal session shape — cookie.expires may be a Date or ISO string after JSON round-trip
 interface StoredSession {
-  cookie: { expires?: string | Date | null };
+  cookie: { expires?: Date | string | null; [k: string]: unknown };
   [key: string]: unknown;
 }
-
-type SessionCallback = (err?: Error | null) => void;
-type GetCallback = (err: Error | null, session: StoredSession | null) => void;
 
 /** Custom file-backed session store for @fastify/session.
  *
@@ -16,6 +16,10 @@ type GetCallback = (err: Error | null, session: StoredSession | null) => void;
  * at `filePath` (mode 0600). On startup, call `init()` to load existing
  * sessions from disk — valid, non-expired sessions are restored; expired
  * ones are discarded.
+ *
+ * Cast to `unknown` when passing as `store` to fastifySession — the interface
+ * is structurally compatible but the Fastify.Session namespace type isn't
+ * directly importable.
  */
 export class FileSessionStore {
   private sessions = new Map<string, StoredSession>();
@@ -48,7 +52,7 @@ export class FileSessionStore {
     }
   }
 
-  get(sessionId: string, callback: GetCallback): void {
+  get(sessionId: string, callback: (err: Error | null, session: StoredSession | null) => void): void {
     const session = this.sessions.get(sessionId) ?? null;
     if (session && this.isExpired(session, Date.now())) {
       this.sessions.delete(sessionId);
@@ -58,13 +62,13 @@ export class FileSessionStore {
     callback(null, session);
   }
 
-  set(sessionId: string, session: StoredSession, callback: SessionCallback): void {
+  set(sessionId: string, session: StoredSession, callback: Callback): void {
     this.sessions.set(sessionId, session);
     this.pruneExpired();
     this.persist().then(() => callback(null), (err: unknown) => callback(err instanceof Error ? err : new Error(String(err))));
   }
 
-  destroy(sessionId: string, callback: SessionCallback): void {
+  destroy(sessionId: string, callback: Callback): void {
     this.sessions.delete(sessionId);
     this.persist().then(() => callback(null), (err: unknown) => callback(err instanceof Error ? err : new Error(String(err))));
   }
@@ -83,7 +87,7 @@ export class FileSessionStore {
   }
 
   private async persist(): Promise<void> {
-    const data: Record<string, StoredSession> = {};
+    const data: Record<string, unknown> = {};
     for (const [id, session] of this.sessions) {
       data[id] = session;
     }
