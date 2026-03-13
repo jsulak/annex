@@ -171,15 +171,7 @@ export default function NoteList() {
     [deleteNote],
   );
 
-  if (loading || searchLoading) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
-        {searchLoading ? 'Searching...' : 'Loading...'}
-      </div>
-    );
-  }
-
-  if (displayNotes.length === 0) {
+  if (!loading && !searchLoading && displayNotes.length === 0) {
     return (
       <div style={{ padding: '16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
         {isSearching ? 'No results found.' : 'No notes found.'}
