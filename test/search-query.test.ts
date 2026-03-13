@@ -596,3 +596,50 @@ describe('search — forward matching', () => {
     await http.delete(`/api/v1/notes/${id}`);
   });
 });
+
+describe('search — emoji and non-ASCII', () => {
+  test('search finds note containing emoji in body', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, { body: '# Emoji Note\n\nThis note has a 🌟 star emoji.' });
+
+    const results = await (await http.get('/api/v1/search?q=%F0%9F%8C%9F')).json(); // 🌟
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('search finds note by emoji in title/filename', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, { body: '# 🚀 Rocket Note\n\nLaunch day!' });
+
+    const results = await (await http.get('/api/v1/search?q=%F0%9F%9A%80')).json(); // 🚀
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('emoji combined with plain text (AND logic) finds correct note', async () => {
+    const id1 = nextId();
+    const id2 = nextId();
+    await http.put(`/api/v1/notes/${id1}`, { body: '# Match\n\nuniqEmojiAnd77 🎯 on target' });
+    await http.put(`/api/v1/notes/${id2}`, { body: '# No Emoji\n\nuniqEmojiAnd77 plain text' });
+
+    // Search for emoji + plain term — only id1 has both
+    const results = await (await http.get('/api/v1/search?q=uniqEmojiAnd77%20%F0%9F%8E%AF')).json(); // 🎯
+    expect(results.some((r: { id: string }) => r.id === id1)).toBe(true);
+    expect(results.some((r: { id: string }) => r.id === id2)).toBe(false);
+
+    await http.delete(`/api/v1/notes/${id1}`);
+    await http.delete(`/api/v1/notes/${id2}`);
+  });
+
+  test('search finds note with accented characters', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, { body: '# Accents\n\ncafé résumé naïve' });
+
+    const results = await (await http.get('/api/v1/search?q=caf%C3%A9')).json(); // café
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+});
