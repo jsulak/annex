@@ -131,8 +131,7 @@ function formatFilenameAsTitle(filename: string): string {
   // Strip leading timestamp ID (12-14 digits + optional space)
   title = title.replace(/^\d{12,14}\s*/, '');
   if (!title) return '';
-  // Convert to sentence case: lowercase everything, uppercase first char
-  return title.charAt(0).toUpperCase() + title.slice(1).toLowerCase();
+  return title;
 }
 
 export default function Preview({ body, filename, onNavigate, onSearchTag }: Props) {
