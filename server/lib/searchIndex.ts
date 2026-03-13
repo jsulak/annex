@@ -134,11 +134,31 @@ function generateSnippet(
   return { snippet, offset: start > 0 ? -3 : 0 };
 }
 
+/** True when a term contains characters outside ASCII range (emoji, accented, etc.).
+ *  Flexsearch strips these during indexing so they can never match via its index. */
+function hasNonAscii(s: string): boolean {
+  return /[^\x00-\x7F]/.test(s);
+}
+
+/** Direct substring scan of all stored notes for a term (case-insensitive).
+ *  Used as a fallback for non-ASCII terms that Flexsearch cannot index. */
+function directScan(term: string): Set<string> {
+  const lower = term.toLowerCase();
+  const ids = new Set<string>();
+  for (const [id, note] of noteStore) {
+    const combined = `${note.filename} ${note.title} ${note.body}`.toLowerCase();
+    if (combined.includes(lower)) ids.add(id);
+  }
+  return ids;
+}
+
 /** Search flexsearch for each term and intersect results (AND logic). */
 function intersectSearchResults(terms: string[]): Set<string> {
   let result: Set<string> | null = null;
   for (const term of terms) {
-    const ids = new Set(flexIndex.search(term, 100_000).map(String));
+    const ids = hasNonAscii(term)
+      ? directScan(term)
+      : new Set(flexIndex.search(term, 100_000).map(String));
     if (result === null) {
       result = ids;
     } else {
