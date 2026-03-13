@@ -47,9 +47,26 @@ body {
   font-size: 1.6em;
   font-weight: bold;
   color: var(--text-primary);
-  margin-bottom: 0.6em;
+  margin-bottom: 0.3em;
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);
+}
+
+.preview-content .preview-meta {
+  margin-bottom: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+}
+
+.preview-content .preview-meta-date {
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.preview-content .preview-meta-keywords {
+  color: var(--text-secondary);
+  font-size: 0.9em;
 }
 
 .preview-content h1,
@@ -98,10 +115,13 @@ body {
   color: var(--text-secondary);
 }
 
-/* First heading after title shouldn't have extra top margin */
+/* First heading after title or meta block shouldn't have extra top margin */
 .preview-content .preview-title + h1,
 .preview-content .preview-title + h2,
-.preview-content .preview-title + h3 {
+.preview-content .preview-title + h3,
+.preview-content .preview-meta + h1,
+.preview-content .preview-meta + h2,
+.preview-content .preview-meta + h3 {
   margin-top: 0;
 }
 

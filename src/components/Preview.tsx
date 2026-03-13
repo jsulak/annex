@@ -41,20 +41,84 @@ function postprocessHtml(html: string): string {
   );
 }
 
+interface NoteMetadata {
+  date?: string;
+  keywords?: string;
+  /** Body with Title/Date/Keywords lines removed */
+  body: string;
+}
+
+/** Extract Title/Date/Keywords metadata lines from the note body.
+ *  These appear at the top of Archive-style notes as `Key:\t\tValue`. */
+function extractMetadata(body: string): NoteMetadata {
+  const meta: NoteMetadata = { body };
+  let text = body;
+
+  // Title: line is redundant (shown as h1 from filename) — strip it
+  text = text.replace(/^title:\s*.+$/gim, '');
+
+  const dateMatch = text.match(/^date:\s*(.+)$/im);
+  if (dateMatch) {
+    meta.date = dateMatch[1].trim();
+    text = text.replace(/^date:\s*.+$/gim, '');
+  }
+
+  const kwMatch = text.match(/^keywords:\s*(.+)$/im);
+  if (kwMatch) {
+    meta.keywords = kwMatch[1].trim();
+    text = text.replace(/^keywords:\s*.+$/gim, '');
+  }
+
+  meta.body = text;
+  return meta;
+}
+
+/** Format a date string (e.g. "2020-09-06 15:50") as "September 6, 2020". */
+function formatDate(raw: string): string {
+  // Parse only the date portion to avoid timezone shifts
+  const datePart = raw.trim().split(/\s/)[0];
+  const [year, month, day] = datePart.split('-').map(Number);
+  if (!year || !month || !day) return raw;
+  const d = new Date(year, month - 1, day);
+  if (isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 function renderMarkdown(body: string, filename?: string): string {
-  const preprocessed = preprocessMarkdown(body);
+  const meta = extractMetadata(body);
+  const preprocessed = preprocessMarkdown(meta.body);
   const rawHtml = marked.parse(preprocessed) as string;
   const clean = DOMPurify.sanitize(rawHtml, {
     ADD_ATTR: ['data-wikilink', 'data-tag', 'target'],
   });
   let html = postprocessHtml(clean);
 
+  // Build metadata block (date + keywords) to insert after the title
+  const metaParts: string[] = [];
+  if (meta.date) {
+    metaParts.push(
+      `<div class="preview-meta-date">${DOMPurify.sanitize(formatDate(meta.date))}</div>`,
+    );
+  }
+  if (meta.keywords) {
+    const kwHtml = DOMPurify.sanitize(
+      preprocessMarkdown(meta.keywords),
+      { ADD_ATTR: ['data-wikilink', 'data-tag'] },
+    );
+    metaParts.push(`<div class="preview-meta-keywords">${kwHtml}</div>`);
+  }
+  const metaBlock = metaParts.length
+    ? `<div class="preview-meta">${metaParts.join('')}</div>`
+    : '';
+
   // Prepend a formatted title from filename if present
   if (filename) {
     const titleText = formatFilenameAsTitle(filename);
     if (titleText) {
-      html = `<div class="preview-title">${DOMPurify.sanitize(titleText)}</div>` + html;
+      html = `<div class="preview-title">${DOMPurify.sanitize(titleText)}</div>${metaBlock}` + html;
     }
+  } else if (metaBlock) {
+    html = metaBlock + html;
   }
 
   return html;
