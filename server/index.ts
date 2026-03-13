@@ -1,4 +1,5 @@
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
 import Fastify from 'fastify';
@@ -18,6 +19,7 @@ import { registerSync } from './routes/sync.js';
 import { buildIndex, getIndexSize } from './lib/searchIndex.js';
 import { startWatcher, stopWatcher } from './lib/watcher.js';
 import { createBackup, pruneBackups } from './lib/backup.js';
+import { FileSessionStore } from './lib/sessionStore.js';
 
 function requireEnv(name: string, minLength = 1): string {
   const value = process.env[name];
@@ -45,6 +47,9 @@ const BACKUP_INTERVAL_MS = parseInt(process.env.BACKUP_INTERVAL_HOURS || '24', 1
 // Resolve and validate NOTES_DIR
 const resolvedNotesDir = path.resolve(NOTES_DIR);
 
+const SESSIONS_FILE = process.env.SESSIONS_FILE ||
+  path.join(os.homedir(), '.annex', 'sessions.json');
+
 async function start() {
   // Ensure NOTES_DIR exists
   try {
@@ -67,10 +72,13 @@ async function start() {
     contentSecurityPolicy: IS_PROD ? undefined : false,
   });
 
-  // Cookie + session
+  // Cookie + session (file-backed store persists sessions across restarts)
+  const sessionStore = new FileSessionStore(SESSIONS_FILE);
+  await sessionStore.init();
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
     secret: SESSION_SECRET,
+    store: sessionStore,
     cookieName: 'annex_session',
     cookie: {
       maxAge: SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
