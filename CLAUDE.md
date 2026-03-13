@@ -64,7 +64,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] control-n should not create a new file - I want to use keyboard navigation instead
 - [x] File list should not scroll left and right on iphone
 - [x] iphone editing: does not include autoxorrect, etc and should
-- [ ] Persist session through service restart
+- [x] Persist session through service restart
 
 
 ### Production Hardening
