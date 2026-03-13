@@ -78,7 +78,7 @@ async function start() {
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
     secret: SESSION_SECRET,
-    store: sessionStore,
+    store: sessionStore as unknown as import('@fastify/session').SessionStore,
     cookieName: 'annex_session',
     cookie: {
       maxAge: SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
