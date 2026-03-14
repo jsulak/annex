@@ -16,6 +16,7 @@ import { registerTags } from './routes/tags.js';
 import { registerEvents } from './routes/events.js';
 import { registerConfig } from './routes/config.js';
 import { registerSync } from './routes/sync.js';
+import { registerAssets } from './routes/assets.js';
 import { buildIndex, getIndexSize } from './lib/searchIndex.js';
 import { startWatcher, stopWatcher } from './lib/watcher.js';
 import { createBackup, pruneBackups } from './lib/backup.js';
@@ -120,6 +121,9 @@ async function start() {
 
   // Sync (Syncthing) API
   await registerSync(app, SYNCTHING_API_KEY, resolvedNotesDir);
+
+  // Assets API (serves files from NOTES_DIR subdirectories, e.g. media/)
+  await registerAssets(app, resolvedNotesDir);
 
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);

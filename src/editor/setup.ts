@@ -12,6 +12,7 @@ import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js'
 import { formattingKeymap } from './keymaps.js';
 import { listIndent } from './listIndent.js';
 import { linkDecorations } from './linkDecorations.js';
+import { imageDecorations } from './imageDecorations.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
@@ -101,6 +102,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     listIndent,
     wikiLinks(callbacks.onNavigate, callbacks.onSearchTag),
     linkDecorations(),
+    imageDecorations(),
     zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {

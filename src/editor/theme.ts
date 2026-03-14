@@ -103,6 +103,17 @@ export const zettelTheme = EditorView.theme({
     fontSize: '0.85em',
     padding: '0 2px',
   },
+  '.cm-image-widget': {
+    display: 'inline-block',
+    verticalAlign: 'middle',
+  },
+  '.cm-image-inline': {
+    maxWidth: '100%',
+    maxHeight: '400px',
+    display: 'block',
+    margin: '4px 0',
+    borderRadius: '4px',
+  },
   '.cm-bare-url': {
     color: 'var(--text-accent)',
     textDecoration: 'underline',
