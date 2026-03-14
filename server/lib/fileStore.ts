@@ -60,6 +60,17 @@ export async function statNoteFile(notesDir: string, filename: string): Promise<
   return { mtime: stat.mtime, mtimeMs: stat.mtimeMs };
 }
 
+/** Write a binary file atomically to NOTES_DIR/media/. Returns the relative path "media/<filename>". */
+export async function writeMediaFile(notesDir: string, filename: string, data: Buffer): Promise<string> {
+  const mediaDir = path.join(notesDir, 'media');
+  await fs.mkdir(mediaDir, { recursive: true });
+  const filePath = safePath(notesDir, path.join('media', filename));
+  const tmpPath = filePath + '.tmp.' + crypto.randomBytes(4).toString('hex');
+  await fs.writeFile(tmpPath, data);
+  await fs.rename(tmpPath, filePath);
+  return 'media/' + filename;
+}
+
 /** Find the file in notesDir matching the given ID (numeric prefix or full filename stem). */
 export async function findFileById(notesDir: string, id: string): Promise<string | null> {
   if (!id) return null;

@@ -1,4 +1,4 @@
-let _csrfToken: string | null = null;
+export let _csrfToken: string | null = null;
 
 /** Fetch a fresh CSRF token from the server and store it in memory. */
 export async function fetchCsrfToken(): Promise<void> {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { createExtensions, type EditorCallbacks } from '../editor/setup.js';
+import { createExtensions, type EditorCallbacks, type UploadStatus } from '../editor/setup.js';
 import { saveKeymap } from '../editor/keymaps.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 
@@ -12,6 +12,8 @@ interface Props {
   onNavigate?: (target: string) => void;
   onSearchTag?: (tag: string) => void;
   completionProviders?: CompletionProviders;
+  onUploadStatus?: (status: UploadStatus, message?: string) => void;
+  insertRef?: React.MutableRefObject<((text: string) => void) | null>;
 }
 
 export default function CodeMirrorEditor({
@@ -21,6 +23,8 @@ export default function CodeMirrorEditor({
   onNavigate,
   onSearchTag,
   completionProviders,
+  onUploadStatus,
+  insertRef,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -39,6 +43,9 @@ export default function CodeMirrorEditor({
 
   const completionProvidersRef = useRef(completionProviders);
   completionProvidersRef.current = completionProviders;
+
+  const onUploadStatusRef = useRef(onUploadStatus);
+  onUploadStatusRef.current = onUploadStatus;
 
   // Stable callback that delegates to the latest onUpdate ref
   // Suppressed during programmatic doc swaps to avoid false dirty/save
@@ -69,12 +76,17 @@ export default function CodeMirrorEditor({
     getTags: () => completionProvidersRef.current?.getTags() ?? [],
   }), []);
 
+  const stableOnUploadStatus = useCallback((status: UploadStatus, message?: string) => {
+    onUploadStatusRef.current?.(status, message);
+  }, []);
+
   const buildCallbacks = useCallback((): EditorCallbacks => ({
     onUpdate: stableOnUpdate,
     onNavigate: stableOnNavigate,
     onSearchTag: stableOnSearchTag,
     completionProviders: stableProviders,
-  }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag, stableProviders]);
+    onUploadStatus: stableOnUploadStatus,
+  }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag, stableProviders, stableOnUploadStatus]);
 
   // Create editor view once on mount
   useEffect(() => {
@@ -97,9 +109,18 @@ export default function CodeMirrorEditor({
 
     viewRef.current = view;
 
+    if (insertRef) {
+      insertRef.current = (text: string) => {
+        const pos = view.state.selection.main.from;
+        view.dispatch({ changes: { from: pos, to: pos, insert: text } });
+        view.focus();
+      };
+    }
+
     return () => {
       view.destroy();
       viewRef.current = null;
+      if (insertRef) insertRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
