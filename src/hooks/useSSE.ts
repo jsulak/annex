@@ -29,9 +29,9 @@ export function useSSE() {
       });
 
       es.addEventListener('note:modified', (e) => {
-        const { id } = JSON.parse(e.data);
+        const { id, etag } = JSON.parse(e.data) as { id: string; etag?: string };
         void upsertNoteFromSSE(id);
-        void reloadSelectedNote(id);
+        void reloadSelectedNote(id, etag);
       });
 
       es.addEventListener('note:deleted', (e) => {

@@ -11,7 +11,7 @@ import {
 } from '../lib/fileStore.js';
 import { parseNote, NoteIndex, NoteDetail } from '../lib/noteParser.js';
 import { addToIndex, removeFromIndex } from '../lib/searchIndex.js';
-import { suppressPath } from '../lib/watcher.js';
+import { suppressPath, broadcast } from '../lib/watcher.js';
 
 function mtimeToEtag(mtimeMs: number): string {
   return Math.round(mtimeMs).toString(16);
@@ -107,6 +107,10 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     // Update search index
     addToIndex({ ...note, body: noteBody });
 
+    // Broadcast to all SSE clients so other sessions see the change immediately.
+    // suppressPath prevents the chokidar watcher from double-broadcasting.
+    broadcast('note:modified', { id: note.id, filename: note.filename, etag });
+
     return detail;
   });
 
@@ -122,6 +126,7 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     suppressPath(path.join(notesDir, filename));
     await deleteNoteFile(notesDir, filename);
     removeFromIndex(id);
+    broadcast('note:deleted', { id, filename });
     return { ok: true, filename };
   });
 
@@ -208,8 +213,12 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
     const oldNote = parseNote(oldFilename, body, mtime);
     if (oldNote.id !== note.id) {
       removeFromIndex(oldNote.id);
+      broadcast('note:deleted', { id: oldNote.id, filename: oldFilename });
     }
     addToIndex({ ...note, body });
+
+    // Broadcast the updated note so other sessions see the rename immediately
+    broadcast('note:modified', { id: note.id, filename: note.filename, etag });
 
     return detail;
   });

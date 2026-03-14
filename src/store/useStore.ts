@@ -62,7 +62,7 @@ interface AppState {
   deleteNote: (id: string) => Promise<boolean>;
   upsertNoteFromSSE: (id: string) => Promise<void>;
   removeNoteFromSSE: (id: string) => void;
-  reloadSelectedNote: (id: string) => Promise<void>;
+  reloadSelectedNote: (id: string, etag?: string) => Promise<void>;
   setConflict: (conflict: ConflictInfo | null) => void;
   setHasPendingEdits: (value: boolean, body?: string | null) => void;
   resolveConflict: (choice: 'local' | 'server') => Promise<void>;
@@ -288,15 +288,19 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
-  reloadSelectedNote: async (id: string) => {
-    const { selectedId, hasPendingEdits } = get();
+  reloadSelectedNote: async (id: string, etag?: string) => {
+    const { selectedId, hasPendingEdits, selectedNote } = get();
     if (selectedId !== id) return;
+    // If the incoming etag matches what we already have, there is nothing to do.
+    // This prevents false conflict dialogs when a session receives the echo of
+    // its own just-saved note (PUT handler broadcasts; watcher is suppressed).
+    if (etag && selectedNote?.etag === etag) return;
     try {
       const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
       if (res.ok) {
         const note: NoteDetail = await res.json();
         if (hasPendingEdits) {
-          const { pendingBody, selectedNote } = get();
+          const { pendingBody } = get();
           get().setConflict({
             noteId: id,
             localBody: pendingBody ?? selectedNote?.body ?? '',
