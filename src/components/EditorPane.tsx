@@ -4,7 +4,6 @@ import { useAutoSave } from '../hooks/useAutoSave.js';
 import type { SaveStatus } from '../hooks/useAutoSave.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 import type { UploadStatus } from '../editor/setup.js';
-import { uploadImage, UploadError } from '../api/uploadImage.js';
 import CodeMirrorEditor from './CodeMirrorEditor.js';
 import Preview from './Preview.js';
 import ConflictDialog from './ConflictDialog.js';
@@ -44,7 +43,7 @@ function UploadIndicator({ status, message }: { status: UploadStatus; message?: 
   const style: React.CSSProperties = {
     position: 'absolute',
     top: 8,
-    right: 40,
+    right: 16,
     fontSize: '12px',
     fontFamily: 'var(--font-mono)',
     pointerEvents: 'none',
@@ -119,7 +118,6 @@ export default function EditorPane() {
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
   const uploadErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insertRef = useRef<((text: string) => void) | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Track live content for preview in split mode
   const [liveContent, setLiveContent] = useState<string>('');
 
@@ -190,22 +188,6 @@ export default function EditorPane() {
       uploadErrorTimerRef.current = setTimeout(() => setUploadStatus('idle'), 3000);
     }
   }, []);
-
-  const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    handleUploadStatus('uploading');
-    try {
-      const { path } = await uploadImage(file);
-      const alt = file.name.replace(/\.[^.]+$/, '');
-      insertRef.current?.(`![${alt}](${path})`);
-      handleUploadStatus('idle');
-    } catch (err) {
-      const msg = err instanceof UploadError ? err.message : 'Upload failed';
-      handleUploadStatus('error', msg);
-    }
-  }, [handleUploadStatus]);
 
   // Completion providers for [[ and # autocomplete
   const completionProviders: CompletionProviders = useMemo(
@@ -298,37 +280,7 @@ export default function EditorPane() {
       <ViewModeToggle mode={viewMode} onChange={setViewMode} />
       {viewMode !== 'preview' && <SaveIndicator status={saveStatus} />}
       {viewMode !== 'preview' && (
-        <>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
-            style={{ display: 'none' }}
-            onChange={handleFileInputChange}
-          />
-          <button
-            title="Insert image"
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              position: 'absolute',
-              top: 6,
-              right: 8,
-              zIndex: 10,
-              fontFamily: 'var(--font-mono)',
-              fontSize: '14px',
-              padding: '2px 6px',
-              border: '1px solid var(--border)',
-              borderRadius: '2px',
-              background: 'var(--bg-app)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              lineHeight: 1,
-            }}
-          >
-            &#x1F4F7;
-          </button>
-          <UploadIndicator status={uploadStatus} message={uploadMessage} />
-        </>
+        <UploadIndicator status={uploadStatus} message={uploadMessage} />
       )}
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, paddingTop: 28 }}>
