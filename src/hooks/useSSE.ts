@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore.js';
+import { clientId } from '../api/client.js';
 
 export function useSSE() {
   const upsertNoteFromSSE = useStore((s) => s.upsertNoteFromSSE);
@@ -29,9 +30,17 @@ export function useSSE() {
       });
 
       es.addEventListener('note:modified', (e) => {
-        const { id, etag } = JSON.parse(e.data) as { id: string; etag?: string };
+        const { id, etag, clientId: sourceClientId } = JSON.parse(e.data) as {
+          id: string;
+          etag?: string;
+          clientId?: string;
+        };
         void upsertNoteFromSSE(id);
-        void reloadSelectedNote(id, etag);
+        // Skip reload if this broadcast came from our own save — the PUT response
+        // already updated our state, and reloading would trigger a false conflict.
+        if (sourceClientId !== clientId) {
+          void reloadSelectedNote(id, etag);
+        }
       });
 
       es.addEventListener('note:deleted', (e) => {

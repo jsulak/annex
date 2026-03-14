@@ -109,7 +109,9 @@ export async function registerNotes(app: FastifyInstance, notesDir: string) {
 
     // Broadcast to all SSE clients so other sessions see the change immediately.
     // suppressPath prevents the chokidar watcher from double-broadcasting.
-    broadcast('note:modified', { id: note.id, filename: note.filename, etag });
+    // clientId is echoed back so the originating session can ignore its own broadcast.
+    const clientId = request.headers['x-client-id'];
+    broadcast('note:modified', { id: note.id, filename: note.filename, etag, clientId });
 
     return detail;
   });
