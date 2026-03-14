@@ -1,5 +1,8 @@
 export let _csrfToken: string | null = null;
 
+/** Stable ID for this browser session — echoed back in SSE broadcasts so we can ignore our own saves. */
+export const clientId = crypto.randomUUID();
+
 /** Fetch a fresh CSRF token from the server and store it in memory. */
 export async function fetchCsrfToken(): Promise<void> {
   try {
@@ -25,6 +28,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   if (MUTATING_METHODS.has(method) && _csrfToken) {
     headers['x-csrf-token'] = _csrfToken;
   }
+  headers['x-client-id'] = clientId;
 
   const res = await fetch(path, {
     ...options,
