@@ -13,13 +13,17 @@ import { formattingKeymap } from './keymaps.js';
 import { listIndent } from './listIndent.js';
 import { linkDecorations } from './linkDecorations.js';
 import { imageDecorations } from './imageDecorations.js';
+import { imageUpload, type UploadStatus } from './imageUpload.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
   onNavigate: (target: string) => void;
   onSearchTag: (tag: string) => void;
   completionProviders: CompletionProviders;
+  onUploadStatus: (status: UploadStatus, message?: string) => void;
 }
+
+export type { UploadStatus };
 
 // Matches a list marker with leading whitespace: "  - ", "* ", "1. ", etc.
 const listLineRe = /^(\s*)([-*+]|\d+[.)]) /;
@@ -103,6 +107,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     wikiLinks(callbacks.onNavigate, callbacks.onSearchTag),
     linkDecorations(),
     imageDecorations(),
+    imageUpload(callbacks.onUploadStatus),
     zettelAutocomplete(callbacks.completionProviders),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {

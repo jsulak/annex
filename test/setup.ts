@@ -14,6 +14,7 @@ import { registerEvents } from '../server/routes/events.js';
 import { registerConfig } from '../server/routes/config.js';
 import { registerSync } from '../server/routes/sync.js';
 import { registerAssets } from '../server/routes/assets.js';
+import { registerMedia } from '../server/routes/media.js';
 import { buildIndex } from '../server/lib/searchIndex.js';
 import { startWatcher, stopWatcher } from '../server/lib/watcher.js';
 
@@ -86,6 +87,7 @@ export async function startTestServer(): Promise<TestContext> {
   await registerConfig(app);
   await registerSync(app, '', notesDir);
   await registerAssets(app, notesDir);
+  await registerMedia(app, notesDir);
 
   app.get('/api/v1/health', async () => ({ status: 'ok' }));
   app.get('/api/v1/auth/csrf-token', async (_request, reply) => {
@@ -153,6 +155,13 @@ export function api(ctx: TestContext) {
       fetch(`${base}${path}`, {
         method: 'DELETE',
         headers: { Cookie: ctx.cookie, 'x-csrf-token': ctx.csrfToken },
+      }),
+
+    postMultipart: (path: string, formData: FormData) =>
+      fetch(`${base}${path}`, {
+        method: 'POST',
+        headers: { Cookie: ctx.cookie, 'x-csrf-token': ctx.csrfToken },
+        body: formData,
       }),
 
     /** Make a request without auth cookie or CSRF token. */
