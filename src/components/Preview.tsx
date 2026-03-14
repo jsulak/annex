@@ -12,6 +12,14 @@ interface Props {
 // Configure marked for CommonMark + GFM
 marked.setOptions({ gfm: true, breaks: false });
 
+/** URL-encode spaces in markdown image/link paths so marked can parse them. */
+function encodeImagePaths(md: string): string {
+  return md.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_match, alt: string, src: string) => `![${alt}](${src.replace(/ /g, '%20')})`,
+  );
+}
+
 /** Convert [[wiki-links]] and #tags to clickable HTML before sanitizing. */
 function preprocessMarkdown(md: string): string {
   // Replace [[target]] with a clickable anchor
@@ -35,10 +43,16 @@ function preprocessMarkdown(md: string): string {
 
 /** Add target="_blank" to external links after rendering. */
 function postprocessHtml(html: string): string {
-  return html.replace(
+  let result = html.replace(
     /<a href="(https?:\/\/[^"]*)">/g,
     '<a href="$1" target="_blank" rel="noopener noreferrer">',
   );
+  // Rewrite relative image src paths to the assets API endpoint
+  result = result.replace(
+    /(<img\s[^>]*?)src="(?!https?:\/\/|\/|data:)([^"]+)"/gi,
+    (_match, before, src) => `${before}src="/api/v1/assets/${src}"`,
+  );
+  return result;
 }
 
 interface NoteMetadata {
@@ -86,7 +100,7 @@ function formatDate(raw: string): string {
 
 function renderMarkdown(body: string, filename?: string): string {
   const meta = extractMetadata(body);
-  const preprocessed = preprocessMarkdown(meta.body);
+  const preprocessed = preprocessMarkdown(encodeImagePaths(meta.body));
   const rawHtml = marked.parse(preprocessed) as string;
   const clean = DOMPurify.sanitize(rawHtml, {
     ADD_ATTR: ['data-wikilink', 'data-tag', 'target'],
