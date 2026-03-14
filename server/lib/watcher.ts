@@ -34,7 +34,7 @@ export function removeClient(client: SSEClient): void {
   }
 }
 
-function broadcast(event: string, data: Record<string, unknown>): void {
+export function broadcast(event: string, data: Record<string, unknown>): void {
   const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const c of clients) {
     c.write(msg);
@@ -103,8 +103,9 @@ export async function startWatcher(notesDir: string): Promise<void> {
       const body = await fs.readFile(filePath, 'utf-8');
       const stat = await fs.stat(filePath);
       const note = parseNote(filename, body, stat.mtime);
+      const etag = Math.round(stat.mtimeMs).toString(16);
       addToIndex({ ...note, body });
-      broadcast(event, { id: note.id, filename: note.filename });
+      broadcast(event, { id: note.id, filename: note.filename, etag });
     } catch {
       // File may have been deleted between event and read
     }

@@ -4,6 +4,9 @@ import { apiFetch } from '../api/client.js';
 import type { NoteIndex, SearchResult } from '../types.js';
 import ContextMenu from './ContextMenu.js';
 
+const PULL_THRESHOLD = 60;
+const PULL_RESISTANCE = 0.5;
+
 interface ContextMenuState {
   x: number;
   y: number;
@@ -20,7 +23,13 @@ export default function NoteList() {
   const deleteNote = useStore((s) => s.deleteNote);
   const renameNoteInList = useStore((s) => s.renameNoteInList);
   const loading = useStore((s) => s.loading);
+  const fetchNotes = useStore((s) => s.fetchNotes);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const touchStartYRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const pullDistanceRef = useRef(0);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renaming, setRenaming] = useState<{ noteId: string; filename: string } | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -56,6 +65,57 @@ export default function NoteList() {
       renameInputRef.current.select();
     }
   }, [renaming]);
+
+  // All touch handlers use native listeners so preventDefault() works on touchmove
+  // and so that dispatched TouchEvents in tests fire reliably.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (el.scrollTop === 0 && e.touches.length > 0) {
+        touchStartYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
+        pullDistanceRef.current = 0;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isPullingRef.current || e.touches.length === 0) return;
+      const dy = e.touches[0].clientY - touchStartYRef.current;
+      if (dy > 0) {
+        e.preventDefault();
+        const dist = Math.min(dy * PULL_RESISTANCE, PULL_THRESHOLD * 1.5);
+        pullDistanceRef.current = dist;
+        setPullDistance(dist);
+      } else {
+        isPullingRef.current = false;
+        pullDistanceRef.current = 0;
+        setPullDistance(0);
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+      const dist = pullDistanceRef.current;
+      setPullDistance(0);
+      pullDistanceRef.current = 0;
+      if (dist >= PULL_THRESHOLD) {
+        setRefreshing(true);
+        void fetchNotes().then(() => setRefreshing(false));
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [fetchNotes]);
 
   const scrollIntoView = useCallback((index: number) => {
     const el = itemRefs.current.get(index);
@@ -171,25 +231,49 @@ export default function NoteList() {
     [deleteNote],
   );
 
-  if (!loading && !searchLoading && displayNotes.length === 0) {
-    return (
-      <div style={{ padding: '16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
-        {isSearching ? 'No results found.' : 'No notes found.'}
-      </div>
-    );
-  }
+  const indicatorHeight = refreshing ? 40 : pullDistance;
+  const indicatorLabel = refreshing
+    ? 'Refreshing\u2026'
+    : pullDistance >= PULL_THRESHOLD
+      ? 'Release to refresh'
+      : 'Pull to refresh';
+
+  const isEmpty = !loading && !searchLoading && displayNotes.length === 0;
 
   return (
-    <div
-      id="note-list"
-      ref={listRef}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      onFocus={handleFocus}
-      onMouseDown={() => { clickingRef.current = true; }}
-      onMouseUp={() => { clickingRef.current = false; }}
-      style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, outline: 'none' }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div
+        data-testid="pull-refresh-indicator"
+        style={{
+          height: indicatorHeight,
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          color: 'var(--text-secondary)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '11px',
+          transition: pullDistance === 0 && !refreshing ? 'height 0.2s ease' : 'none',
+        }}
+      >
+        {indicatorHeight > 10 ? indicatorLabel : null}
+      </div>
+      <div
+        id="note-list"
+        ref={listRef}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onFocus={handleFocus}
+        onMouseDown={() => { clickingRef.current = true; }}
+        onMouseUp={() => { clickingRef.current = false; }}
+        style={{ overflowY: 'auto', overflowX: 'hidden', flex: 1, outline: 'none' }}
+      >
+        {isEmpty && (
+          <div style={{ padding: '16px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '13px' }}>
+            {isSearching ? 'No results found.' : 'No notes found.'}
+          </div>
+        )}
       {displayNotes.map((note, index) => (
         <div
           key={note.id}
@@ -287,6 +371,7 @@ export default function NoteList() {
           onClose={() => setContextMenu(null)}
         />
       )}
+    </div>
     </div>
   );
 }
