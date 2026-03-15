@@ -118,6 +118,7 @@ export default function EditorPane() {
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
   const uploadErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const insertRef = useRef<((text: string) => void) | null>(null);
+  const editorFocusRequest = useStore((s) => s.editorFocusRequest);
   // Track live content for preview in split mode
   const [liveContent, setLiveContent] = useState<string>('');
 
@@ -303,6 +304,7 @@ export default function EditorPane() {
               completionProviders={completionProviders}
               onUploadStatus={handleUploadStatus}
               insertRef={insertRef}
+              focusRequest={editorFocusRequest}
             />
           </div>
         )}

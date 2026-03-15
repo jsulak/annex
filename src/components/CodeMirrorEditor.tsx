@@ -14,6 +14,7 @@ interface Props {
   completionProviders?: CompletionProviders;
   onUploadStatus?: (status: UploadStatus, message?: string) => void;
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
+  focusRequest?: number;
 }
 
 export default function CodeMirrorEditor({
@@ -25,6 +26,7 @@ export default function CodeMirrorEditor({
   completionProviders,
   onUploadStatus,
   insertRef,
+  focusRequest,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -124,6 +126,13 @@ export default function CodeMirrorEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
+
+  // Focus the editor when focusRequest increments (also fires on mount if already > 0)
+  useEffect(() => {
+    if (focusRequest && focusRequest > 0) {
+      viewRef.current?.focus();
+    }
+  }, [focusRequest]);
 
   // Replace document when doc prop changes (note switch)
   useEffect(() => {

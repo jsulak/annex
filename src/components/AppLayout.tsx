@@ -41,6 +41,7 @@ export default function AppLayout() {
   const selectNote = useStore((s) => s.selectNote);
   const selectedId = useStore((s) => s.selectedId);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
+  const [fileListHidden, setFileListHidden] = useState(false);
   useSSE();
   useNoteNavigation();
   const dragging = useRef(false);
@@ -80,6 +81,18 @@ export default function AppLayout() {
     localStorage.setItem(STORAGE_KEY, String(panelWidth));
   }, [panelWidth]);
 
+  // Cmd+\ — toggle file list
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault();
+        setFileListHidden((h) => !h);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     dragging.current = true;
@@ -113,31 +126,35 @@ export default function AppLayout() {
       <Toolbar />
       <div className="app-panels" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left panel — note list */}
-        <div
-          className={`app-panel-list${selectedId ? ' hidden-mobile' : ''}`}
-          style={{
-            width: panelWidth,
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: '1px solid var(--border)',
-            background: 'var(--bg-app)',
-          }}
-        >
-          <NoteList />
-        </div>
+        {!fileListHidden && (
+          <div
+            className={`app-panel-list${selectedId ? ' hidden-mobile' : ''}`}
+            style={{
+              width: panelWidth,
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              borderRight: '1px solid var(--border)',
+              background: 'var(--bg-app)',
+            }}
+          >
+            <NoteList />
+          </div>
+        )}
 
         {/* Resizable divider */}
-        <div
-          className="app-divider"
-          onMouseDown={onMouseDown}
-          style={{
-            width: '4px',
-            cursor: 'col-resize',
-            flexShrink: 0,
-            background: 'transparent',
-          }}
-        />
+        {!fileListHidden && (
+          <div
+            className="app-divider"
+            onMouseDown={onMouseDown}
+            style={{
+              width: '4px',
+              cursor: 'col-resize',
+              flexShrink: 0,
+              background: 'transparent',
+            }}
+          />
+        )}
 
         {/* Right panel — editor */}
         <div
