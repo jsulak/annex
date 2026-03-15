@@ -18,6 +18,7 @@ const shortcuts: Array<{ keys: string; desc: string }> = [
   { keys: `${mod}+Shift+K`, desc: 'Tags' },
   { keys: `${mod}+Shift+B`, desc: 'Toggle backlinks' },
   { keys: `${mod}+,`, desc: 'Settings' },
+  { keys: `${mod}+\\`, desc: 'Toggle file list' },
   { keys: '↑ / ↓ / j / k', desc: 'Navigate note list' },
   { keys: '?', desc: 'This help' },
 ];

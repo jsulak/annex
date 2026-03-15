@@ -5,6 +5,7 @@ export default function QuickOpen() {
   const notes = useStore((s) => s.notes);
   const selectNote = useStore((s) => s.selectNote);
   const setQuickOpenVisible = useStore((s) => s.setQuickOpenVisible);
+  const requestEditorFocus = useStore((s) => s.requestEditorFocus);
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -46,9 +47,10 @@ export default function QuickOpen() {
   const handleSelect = useCallback(
     (id: string) => {
       void selectNote(id);
+      requestEditorFocus();
       close();
     },
-    [selectNote, close],
+    [selectNote, requestEditorFocus, close],
   );
 
   const handleKeyDown = useCallback(
