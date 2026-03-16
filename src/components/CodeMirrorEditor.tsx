@@ -1,9 +1,10 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { createExtensions, type EditorCallbacks, type UploadStatus } from '../editor/setup.js';
+import { createExtensions, setSearchTermsEffect, type EditorCallbacks, type UploadStatus } from '../editor/setup.js';
 import { saveKeymap } from '../editor/keymaps.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
+import { parseSearchTerms } from '../utils/searchTerms.js';
 
 interface Props {
   doc: string;
@@ -15,6 +16,7 @@ interface Props {
   onUploadStatus?: (status: UploadStatus, message?: string) => void;
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
   focusRequest?: number;
+  searchQuery?: string;
 }
 
 export default function CodeMirrorEditor({
@@ -27,10 +29,13 @@ export default function CodeMirrorEditor({
   onUploadStatus,
   insertRef,
   focusRequest,
+  searchQuery,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const isSettingDocRef = useRef(false);
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
@@ -111,6 +116,12 @@ export default function CodeMirrorEditor({
 
     viewRef.current = view;
 
+    // Apply any active search highlights on mount
+    const initialTerms = parseSearchTerms(searchQueryRef.current ?? '');
+    if (initialTerms.length > 0) {
+      view.dispatch({ effects: setSearchTermsEffect.of(initialTerms) });
+    }
+
     if (insertRef) {
       insertRef.current = (text: string) => {
         const pos = view.state.selection.main.from;
@@ -126,6 +137,14 @@ export default function CodeMirrorEditor({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
+
+  // Update search highlights when searchQuery changes
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const terms = parseSearchTerms(searchQuery ?? '');
+    view.dispatch({ effects: setSearchTermsEffect.of(terms) });
+  }, [searchQuery]);
 
   // Focus the editor when focusRequest increments (also fires on mount if already > 0)
   useEffect(() => {
@@ -155,6 +174,12 @@ export default function CodeMirrorEditor({
     view.setState(newState);
 
     isSettingDocRef.current = false;
+
+    // Re-apply search highlights after state replacement
+    const terms = parseSearchTerms(searchQueryRef.current ?? '');
+    if (terms.length > 0) {
+      view.dispatch({ effects: setSearchTermsEffect.of(terms) });
+    }
   }, [doc, buildCallbacks, stableSaveNow]);
 
   return (

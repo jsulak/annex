@@ -132,4 +132,8 @@ export const zettelTheme = EditorView.theme({
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
+  '.cm-search-highlight': {
+    backgroundColor: 'var(--highlight)',
+    borderRadius: '2px',
+  },
 });

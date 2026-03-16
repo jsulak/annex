@@ -14,6 +14,9 @@ import { listIndent } from './listIndent.js';
 import { linkDecorations } from './linkDecorations.js';
 import { imageDecorations } from './imageDecorations.js';
 import { imageUpload, type UploadStatus } from './imageUpload.js';
+import { searchHighlightField } from './searchHighlight.js';
+
+export { setSearchTermsEffect } from './searchHighlight.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;
@@ -109,6 +112,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
     imageDecorations(),
     imageUpload(callbacks.onUploadStatus),
     zettelAutocomplete(callbacks.completionProviders),
+    searchHighlightField,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         callbacks.onUpdate(update.state.doc.toString());
