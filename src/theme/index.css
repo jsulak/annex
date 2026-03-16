@@ -201,6 +201,13 @@ body {
   padding: 4px 8px;
 }
 
+mark.search-highlight {
+  background-color: var(--highlight);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
 .preview-content th {
   background: color-mix(in srgb, var(--text-primary) 5%, transparent);
 }

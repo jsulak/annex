@@ -1,12 +1,55 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { parseSearchTerms } from '../utils/searchTerms.js';
 
 interface Props {
   body: string;
   filename?: string;
   onNavigate: (target: string) => void;
   onSearchTag: (tag: string) => void;
+  searchQuery?: string;
+}
+
+/** Walk text nodes under `root` and wrap matches with <mark> elements. */
+function applyHighlights(root: Element, terms: string[]): void {
+  if (terms.length === 0) return;
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(${escaped.join('|')})`, 'gi');
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    textNodes.push(node as Text);
+  }
+
+  for (const textNode of textNodes) {
+    const text = textNode.textContent ?? '';
+    if (!pattern.test(text)) continue;
+    pattern.lastIndex = 0;
+
+    const parent = textNode.parentNode;
+    if (!parent) continue;
+
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+      const mark = document.createElement('mark');
+      mark.className = 'search-highlight';
+      mark.textContent = match[0];
+      fragment.appendChild(mark);
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+    parent.replaceChild(fragment, textNode);
+  }
 }
 
 // Configure marked for CommonMark + GFM
@@ -148,7 +191,7 @@ function formatFilenameAsTitle(filename: string): string {
   return title;
 }
 
-export default function Preview({ body, filename, onNavigate, onSearchTag }: Props) {
+export default function Preview({ body, filename, onNavigate, onSearchTag, searchQuery }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = useCallback(
@@ -183,13 +226,21 @@ export default function Preview({ body, filename, onNavigate, onSearchTag }: Pro
     return () => el.removeEventListener('click', handleClick);
   }, [handleClick]);
 
-  const html = renderMarkdown(body, filename);
+  const html = useMemo(() => renderMarkdown(body, filename), [body, filename]);
+  const searchTerms = useMemo(() => parseSearchTerms(searchQuery ?? ''), [searchQuery]);
+
+  // Set innerHTML and apply search highlights
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.innerHTML = html;
+    applyHighlights(el, searchTerms);
+  }, [html, searchTerms]);
 
   return (
     <div
       ref={containerRef}
       className="preview-content"
-      dangerouslySetInnerHTML={{ __html: html }}
       style={{
         flex: 1,
         overflow: 'auto',

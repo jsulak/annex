@@ -113,6 +113,7 @@ export default function EditorPane() {
   const selectNote = useStore((s) => s.selectNote);
   const searchFn = useStore((s) => s.search);
   const conflict = useStore((s) => s.conflict);
+  const searchQuery = useStore((s) => s.searchQuery);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
@@ -305,6 +306,7 @@ export default function EditorPane() {
               onUploadStatus={handleUploadStatus}
               insertRef={insertRef}
               focusRequest={editorFocusRequest}
+              searchQuery={searchQuery}
             />
           </div>
         )}
@@ -317,6 +319,7 @@ export default function EditorPane() {
               filename={selectedNote?.filename}
               onNavigate={handleNavigate}
               onSearchTag={handleSearchTag}
+              searchQuery={searchQuery}
             />
           </div>
         )}
