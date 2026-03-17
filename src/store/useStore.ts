@@ -11,6 +11,7 @@ export interface Tab {
   customTitle: string | null; // null = auto-derive from note
   selectedId: string | null;
   searchQuery: string;
+  searchResults: SearchResult[] | null;
 }
 
 let _tabSeq = 0;
@@ -18,7 +19,7 @@ function generateTabId(): string {
   return `tab-${Date.now()}-${++_tabSeq}`;
 }
 
-const _initialTab: Tab = { id: 'tab-0', customTitle: null, selectedId: null, searchQuery: '' };
+const _initialTab: Tab = { id: 'tab-0', customTitle: null, selectedId: null, searchQuery: '', searchResults: null };
 
 export interface AppSettings {
   autoSaveDelay: number;
@@ -453,15 +454,15 @@ export const useStore = create<AppState>((set, get) => ({
   setFileListHidden: (hidden: boolean) => set({ fileListHidden: hidden }),
 
   syncActiveTab: () => {
-    const { tabs, activeTabId, selectedId, searchQuery } = get();
-    set({ tabs: tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t) });
+    const { tabs, activeTabId, selectedId, searchQuery, searchResults } = get();
+    set({ tabs: tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery, searchResults } : t) });
   },
 
   addTab: () => {
-    const { tabs, activeTabId, selectedId, searchQuery } = get();
-    const newTab: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '' };
+    const { tabs, activeTabId, selectedId, searchQuery, searchResults } = get();
+    const newTab: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '', searchResults: null };
     set({
-      tabs: [...tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t), newTab],
+      tabs: [...tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery, searchResults } : t), newTab],
       activeTabId: newTab.id,
       selectedId: null,
       selectedNote: null,
@@ -475,7 +476,7 @@ export const useStore = create<AppState>((set, get) => ({
   closeTab: (tabId: string) => {
     const { tabs, activeTabId } = get();
     if (tabs.length === 1) {
-      const blank: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '' };
+      const blank: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '', searchResults: null };
       set({ tabs: [blank], activeTabId: blank.id, selectedId: null, selectedNote: null, searchQuery: '', searchResults: null, history: [], historyIndex: -1 });
       return;
     }
@@ -489,7 +490,7 @@ export const useStore = create<AppState>((set, get) => ({
       selectedId: newActive.selectedId,
       selectedNote: null,
       searchQuery: newActive.searchQuery,
-      searchResults: null,
+      searchResults: newActive.searchResults,
       history: [],
       historyIndex: -1,
     });
@@ -497,12 +498,12 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   switchTab: (tabId: string) => {
-    const { tabs, activeTabId, selectedId, searchQuery } = get();
+    const { tabs, activeTabId, selectedId, searchQuery, searchResults } = get();
     if (tabId === activeTabId) return;
-    const updatedTabs = tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t);
+    const updatedTabs = tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery, searchResults } : t);
     const newTab = updatedTabs.find(t => t.id === tabId);
     if (!newTab) return;
-    set({ tabs: updatedTabs, activeTabId: tabId, selectedId: newTab.selectedId, selectedNote: null, searchQuery: newTab.searchQuery, searchResults: null, history: [], historyIndex: -1 });
+    set({ tabs: updatedTabs, activeTabId: tabId, selectedId: newTab.selectedId, selectedNote: null, searchQuery: newTab.searchQuery, searchResults: newTab.searchResults, history: [], historyIndex: -1 });
     if (newTab.selectedId) void get().selectNote(newTab.selectedId);
   },
 
