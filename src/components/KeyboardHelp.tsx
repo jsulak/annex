@@ -19,6 +19,10 @@ const shortcuts: Array<{ keys: string; desc: string }> = [
   { keys: `${mod}+Shift+B`, desc: 'Toggle backlinks' },
   { keys: `${mod}+,`, desc: 'Settings' },
   { keys: `${mod}+\\`, desc: 'Toggle file list' },
+  { keys: `${mod}+T`, desc: 'New tab' },
+  { keys: `${mod}+W`, desc: 'Close tab' },
+  { keys: `${mod}+Shift+[ / ]`, desc: 'Previous / next tab' },
+  { keys: `${mod}+1–9`, desc: 'Jump to tab by index' },
   { keys: '↑ / ↓ / j / k', desc: 'Navigate note list' },
   { keys: '?', desc: 'This help' },
 ];

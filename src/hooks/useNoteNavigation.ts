@@ -13,6 +13,11 @@ export function useNoteNavigation() {
   const selectedId = useStore((s) => s.selectedId);
   const selectedNote = useStore((s) => s.selectedNote);
   const deleteNote = useStore((s) => s.deleteNote);
+  const addTab = useStore((s) => s.addTab);
+  const closeTab = useStore((s) => s.closeTab);
+  const prevTab = useStore((s) => s.prevTab);
+  const nextTab = useStore((s) => s.nextTab);
+  const switchTabByIndex = useStore((s) => s.switchTabByIndex);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -37,17 +42,52 @@ export function useNoteNavigation() {
         return;
       }
 
-      // Cmd+[ — go back
-      if (e.key === '[') {
+      // Cmd+Shift+[ — previous tab (e.key is '{' when shift is held on US keyboards)
+      if (e.shiftKey && (e.key === '{' || e.code === 'BracketLeft')) {
+        e.preventDefault();
+        prevTab();
+        return;
+      }
+
+      // Cmd+Shift+] — next tab
+      if (e.shiftKey && (e.key === '}' || e.code === 'BracketRight')) {
+        e.preventDefault();
+        nextTab();
+        return;
+      }
+
+      // Cmd+[ — go back (only without shift)
+      if (e.key === '[' && !e.shiftKey) {
         e.preventDefault();
         goBack();
         return;
       }
 
-      // Cmd+] — go forward
-      if (e.key === ']') {
+      // Cmd+] — go forward (only without shift)
+      if (e.key === ']' && !e.shiftKey) {
         e.preventDefault();
         goForward();
+        return;
+      }
+
+      // Cmd+T — new tab
+      if (e.key === 't' && !e.shiftKey) {
+        e.preventDefault();
+        addTab();
+        return;
+      }
+
+      // Cmd+W — close current tab
+      if (e.key === 'w' && !e.shiftKey) {
+        e.preventDefault();
+        closeTab(useStore.getState().activeTabId);
+        return;
+      }
+
+      // Cmd+1–9 — jump to tab by index
+      if (!e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
+        e.preventDefault();
+        switchTabByIndex(parseInt(e.key, 10) - 1);
         return;
       }
 
@@ -102,5 +142,5 @@ export function useNoteNavigation() {
       document.removeEventListener('keydown', handler);
       document.removeEventListener('keydown', helpHandler);
     };
-  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, setKeyboardHelpVisible, setNewNoteDialogVisible, selectedId, selectedNote, deleteNote]);
+  }, [goBack, goForward, setQuickOpenVisible, setTagsModalVisible, toggleBacklinks, setSettingsVisible, setKeyboardHelpVisible, setNewNoteDialogVisible, selectedId, selectedNote, deleteNote, addTab, closeTab, prevTab, nextTab, switchTabByIndex]);
 }
