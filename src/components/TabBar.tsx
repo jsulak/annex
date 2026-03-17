@@ -83,6 +83,8 @@ export default function TabBar() {
     setDragOverTabId(null);
   }, []);
 
+  if (tabs.length <= 1) return null;
+
   return (
     <div
       style={{
