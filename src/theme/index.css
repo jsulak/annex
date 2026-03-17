@@ -228,7 +228,7 @@ mark.search-highlight {
 }
 
 /* Responsive: small screens */
-@media (max-width: 860px) {
+@media (max-width: 890px) {
   .app-panels {
     flex-direction: column !important;
   }
