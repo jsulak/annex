@@ -40,8 +40,9 @@ export default function AppLayout() {
   const createNote = useStore((s) => s.createNote);
   const selectNote = useStore((s) => s.selectNote);
   const selectedId = useStore((s) => s.selectedId);
+  const fileListHidden = useStore((s) => s.fileListHidden);
+  const setFileListHidden = useStore((s) => s.setFileListHidden);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
-  const [fileListHidden, setFileListHidden] = useState(false);
   useSSE();
   useNoteNavigation();
   const dragging = useRef(false);
@@ -86,12 +87,12 @@ export default function AppLayout() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
         e.preventDefault();
-        setFileListHidden((h) => !h);
+        setFileListHidden(!useStore.getState().fileListHidden);
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [setFileListHidden]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();

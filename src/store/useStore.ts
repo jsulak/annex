@@ -83,6 +83,8 @@ interface AppState {
   setNewNoteDialogVisible: (visible: boolean) => void;
   editorFocusRequest: number;
   requestEditorFocus: () => void;
+  fileListHidden: boolean;
+  setFileListHidden: (hidden: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -102,6 +104,7 @@ export const useStore = create<AppState>((set, get) => ({
   keyboardHelpVisible: false,
   newNoteDialogVisible: false,
   editorFocusRequest: 0,
+  fileListHidden: false,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
@@ -419,4 +422,5 @@ export const useStore = create<AppState>((set, get) => ({
   setKeyboardHelpVisible: (visible: boolean) => set({ keyboardHelpVisible: visible }),
   setNewNoteDialogVisible: (visible: boolean) => set({ newNoteDialogVisible: visible }),
   requestEditorFocus: () => set((s) => ({ editorFocusRequest: s.editorFocusRequest + 1 })),
+  setFileListHidden: (hidden: boolean) => set({ fileListHidden: hidden }),
 }));

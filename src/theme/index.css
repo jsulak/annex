@@ -42,6 +42,11 @@ body {
   color: var(--text-primary);
 }
 
+/* Hidden by default; shown by media query or inline style when file list is toggled off */
+.mobile-back-btn {
+  display: none;
+}
+
 /* Preview pane styles */
 .preview-content .preview-title {
   font-size: 1.6em;
@@ -223,7 +228,7 @@ mark.search-highlight {
 }
 
 /* Responsive: small screens */
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .app-panels {
     flex-direction: column !important;
   }
@@ -258,7 +263,7 @@ mark.search-highlight {
   }
 
   .mobile-back-btn {
-    display: block !important;
+    display: block;
   }
 
   /* Better touch targets */
