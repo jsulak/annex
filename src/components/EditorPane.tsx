@@ -114,6 +114,8 @@ export default function EditorPane() {
   const searchFn = useStore((s) => s.search);
   const conflict = useStore((s) => s.conflict);
   const searchQuery = useStore((s) => s.searchQuery);
+  const fileListHidden = useStore((s) => s.fileListHidden);
+  const setFileListHidden = useStore((s) => s.setFileListHidden);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
@@ -260,9 +262,9 @@ export default function EditorPane() {
     >
       <button
         className="mobile-back-btn"
-        onClick={deselectNote}
+        onClick={fileListHidden ? () => setFileListHidden(false) : deselectNote}
         style={{
-          display: 'none',
+          ...(fileListHidden ? { display: 'block' } : {}),
           position: 'absolute',
           top: 6,
           left: 12,
