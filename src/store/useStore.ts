@@ -6,6 +6,20 @@ function generateId(): string {
   return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 12);
 }
 
+export interface Tab {
+  id: string;
+  customTitle: string | null; // null = auto-derive from note
+  selectedId: string | null;
+  searchQuery: string;
+}
+
+let _tabSeq = 0;
+function generateTabId(): string {
+  return `tab-${Date.now()}-${++_tabSeq}`;
+}
+
+const _initialTab: Tab = { id: 'tab-0', customTitle: null, selectedId: null, searchQuery: '' };
+
 export interface AppSettings {
   autoSaveDelay: number;
   showSnippets: boolean;
@@ -85,6 +99,18 @@ interface AppState {
   requestEditorFocus: () => void;
   fileListHidden: boolean;
   setFileListHidden: (hidden: boolean) => void;
+  // Tabs
+  tabs: Tab[];
+  activeTabId: string;
+  addTab: () => void;
+  closeTab: (tabId: string) => void;
+  switchTab: (tabId: string) => void;
+  prevTab: () => void;
+  nextTab: () => void;
+  switchTabByIndex: (index: number) => void;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
+  renameTab: (tabId: string, title: string | null) => void;
+  syncActiveTab: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -105,6 +131,8 @@ export const useStore = create<AppState>((set, get) => ({
   newNoteDialogVisible: false,
   editorFocusRequest: 0,
   fileListHidden: false,
+  tabs: [_initialTab],
+  activeTabId: _initialTab.id,
   _navigatingHistory: false,
   conflict: null,
   hasPendingEdits: false,
@@ -423,4 +451,86 @@ export const useStore = create<AppState>((set, get) => ({
   setNewNoteDialogVisible: (visible: boolean) => set({ newNoteDialogVisible: visible }),
   requestEditorFocus: () => set((s) => ({ editorFocusRequest: s.editorFocusRequest + 1 })),
   setFileListHidden: (hidden: boolean) => set({ fileListHidden: hidden }),
+
+  syncActiveTab: () => {
+    const { tabs, activeTabId, selectedId, searchQuery } = get();
+    set({ tabs: tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t) });
+  },
+
+  addTab: () => {
+    const { tabs, activeTabId, selectedId, searchQuery } = get();
+    const newTab: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '' };
+    set({
+      tabs: [...tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t), newTab],
+      activeTabId: newTab.id,
+      selectedId: null,
+      selectedNote: null,
+      searchQuery: '',
+      searchResults: null,
+      history: [],
+      historyIndex: -1,
+    });
+  },
+
+  closeTab: (tabId: string) => {
+    const { tabs, activeTabId } = get();
+    if (tabs.length === 1) {
+      const blank: Tab = { id: generateTabId(), customTitle: null, selectedId: null, searchQuery: '' };
+      set({ tabs: [blank], activeTabId: blank.id, selectedId: null, selectedNote: null, searchQuery: '', searchResults: null, history: [], historyIndex: -1 });
+      return;
+    }
+    const tabIndex = tabs.findIndex(t => t.id === tabId);
+    const newTabs = tabs.filter(t => t.id !== tabId);
+    if (tabId !== activeTabId) { set({ tabs: newTabs }); return; }
+    const newActive = newTabs[Math.min(tabIndex, newTabs.length - 1)];
+    set({
+      tabs: newTabs,
+      activeTabId: newActive.id,
+      selectedId: newActive.selectedId,
+      selectedNote: null,
+      searchQuery: newActive.searchQuery,
+      searchResults: null,
+      history: [],
+      historyIndex: -1,
+    });
+    if (newActive.selectedId) void get().selectNote(newActive.selectedId);
+  },
+
+  switchTab: (tabId: string) => {
+    const { tabs, activeTabId, selectedId, searchQuery } = get();
+    if (tabId === activeTabId) return;
+    const updatedTabs = tabs.map(t => t.id === activeTabId ? { ...t, selectedId, searchQuery } : t);
+    const newTab = updatedTabs.find(t => t.id === tabId);
+    if (!newTab) return;
+    set({ tabs: updatedTabs, activeTabId: tabId, selectedId: newTab.selectedId, selectedNote: null, searchQuery: newTab.searchQuery, searchResults: null, history: [], historyIndex: -1 });
+    if (newTab.selectedId) void get().selectNote(newTab.selectedId);
+  },
+
+  prevTab: () => {
+    const { tabs, activeTabId } = get();
+    const idx = tabs.findIndex(t => t.id === activeTabId);
+    if (idx > 0) get().switchTab(tabs[idx - 1].id);
+  },
+
+  nextTab: () => {
+    const { tabs, activeTabId } = get();
+    const idx = tabs.findIndex(t => t.id === activeTabId);
+    if (idx < tabs.length - 1) get().switchTab(tabs[idx + 1].id);
+  },
+
+  switchTabByIndex: (index: number) => {
+    const tab = get().tabs[index];
+    if (tab) get().switchTab(tab.id);
+  },
+
+  reorderTabs: (fromIndex: number, toIndex: number) => {
+    const newTabs = [...get().tabs];
+    const [moved] = newTabs.splice(fromIndex, 1);
+    newTabs.splice(toIndex, 0, moved);
+    set({ tabs: newTabs });
+  },
+
+  renameTab: (tabId: string, title: string | null) => {
+    set({ tabs: get().tabs.map(t => t.id === tabId ? { ...t, customTitle: title } : t) });
+  },
 }));

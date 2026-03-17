@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore.js';
 import { useSSE } from '../hooks/useSSE.js';
 import { useNoteNavigation } from '../hooks/useNoteNavigation.js';
 import { fetchCsrfToken } from '../api/client.js';
+import TabBar from './TabBar.js';
 import Toolbar from './Toolbar.js';
 import NoteList from './NoteList.js';
 import EditorPane from './EditorPane.js';
@@ -40,8 +41,10 @@ export default function AppLayout() {
   const createNote = useStore((s) => s.createNote);
   const selectNote = useStore((s) => s.selectNote);
   const selectedId = useStore((s) => s.selectedId);
+  const searchQuery = useStore((s) => s.searchQuery);
   const fileListHidden = useStore((s) => s.fileListHidden);
   const setFileListHidden = useStore((s) => s.setFileListHidden);
+  const syncActiveTab = useStore((s) => s.syncActiveTab);
   const [panelWidth, setPanelWidth] = useState(getSavedWidth);
   useSSE();
   useNoteNavigation();
@@ -81,6 +84,11 @@ export default function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(panelWidth));
   }, [panelWidth]);
+
+  // Keep active tab in sync with current note/search selection
+  useEffect(() => {
+    syncActiveTab();
+  }, [selectedId, searchQuery, syncActiveTab]);
 
   // Cmd+\ — toggle file list
   useEffect(() => {
@@ -124,6 +132,7 @@ export default function AppLayout() {
         color: 'var(--text-primary)',
       }}
     >
+      <TabBar />
       <Toolbar />
       <div className="app-panels" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Left panel — note list */}
