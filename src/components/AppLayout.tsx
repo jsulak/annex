@@ -42,6 +42,7 @@ export default function AppLayout() {
   const selectNote = useStore((s) => s.selectNote);
   const selectedId = useStore((s) => s.selectedId);
   const searchQuery = useStore((s) => s.searchQuery);
+  const searchResults = useStore((s) => s.searchResults);
   const fileListHidden = useStore((s) => s.fileListHidden);
   const setFileListHidden = useStore((s) => s.setFileListHidden);
   const syncActiveTab = useStore((s) => s.syncActiveTab);
@@ -88,7 +89,7 @@ export default function AppLayout() {
   // Keep active tab in sync with current note/search selection
   useEffect(() => {
     syncActiveTab();
-  }, [selectedId, searchQuery, syncActiveTab]);
+  }, [selectedId, searchQuery, searchResults, syncActiveTab]);
 
   // Cmd+\ — toggle file list
   useEffect(() => {
