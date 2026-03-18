@@ -229,9 +229,10 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 |---|---|---|
 | `GET` | `/notes` | List all notes (id, filename, title, snippet, tags, modifiedAt) |
 | `GET` | `/notes/:id` | Get full note content + etag |
-| `PUT` | `/notes/:id` | Save note; accepts optional `If-Match: <etag>` header |
+| `PUT` | `/notes/:id` | Create or save note; accepts optional `If-Match: <etag>` header for conflict detection |
 | `DELETE` | `/notes/:id` | Move note to `_trash/` subdirectory |
 | `POST` | `/notes/:id/rename` | Rename note (`{ newFilename }`) |
+| `GET` | `/notes/:id/backlinks` | List notes that link to this note |
 
 ### Search
 
@@ -245,11 +246,12 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 |---|---|---|
 | `GET` | `/tags` | All tags with note counts |
 
-### Assets
+### Assets & Media
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/assets/:filename` | Serve image/attachment from notes directory |
+| `POST` | `/media` | Upload image attachment (multipart/form-data, max 20 MB); returns `{ path }` |
 
 ### Config
 
@@ -258,6 +260,12 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 | `GET` | `/config` | Get saved searches + settings |
 | `PUT` | `/config` | Update saved searches + settings |
 
+### Health
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/health` | Returns `{ ok: true, notesDir, diskFree }` — used by uptime monitors and deploy smoke tests |
+
 ### Auth
 
 | Method | Path | Description |
@@ -265,17 +273,31 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 | `POST` | `/api/v1/auth/login` | `{ password }` → sets session cookie |
 | `POST` | `/api/v1/auth/logout` | Clears session |
 | `POST` | `/api/v1/auth/change-password` | `{ currentPassword, newPassword }` |
+| `GET` | `/api/v1/auth/csrf-token` | Returns a CSRF token for use with state-mutating requests |
+
+### Syncthing Proxy
+
+Requires `SYNCTHING_API_KEY` env var. Returns `503` if Syncthing is not configured.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/sync/status` | Syncthing system status |
+| `GET` | `/sync/connections` | Active device connections |
+| `GET` | `/sync/config/devices` | Configured device list |
+| `POST` | `/sync/config/devices` | Add a new device (`{ deviceId, name }`) |
+| `GET` | `/sync/folder/status` | Status of the notes folder |
 
 ### Real-Time Updates (SSE)
 
 `GET /api/v1/events` (authenticated) — Server-Sent Events stream. Pushed when files change on disk (e.g., Syncthing delivers a change from your Mac):
 
 ```json
-{ "type": "note:created",  "id": "202401151432", "filename": "202401151432 New note.md" }
-{ "type": "note:modified", "id": "202401151432" }
-{ "type": "note:deleted",  "id": "202401151432" }
-{ "type": "index:rebuilt" }
+{ "type": "add",    "path": "202401151432 New note.md" }
+{ "type": "update", "path": "202401151432 New note.md" }
+{ "type": "remove", "path": "202401151432 New note.md" }
 ```
+
+A `comment: ping` frame is sent every 30 seconds to prevent proxy timeouts.
 
 ---
 
@@ -348,34 +370,60 @@ Follows OS `prefers-color-scheme`. Manual light/dark override in settings only.
 ## 13. Feature Specification
 
 ### 13.1 Note List
-Sort by last modified (default), created, or title. Keyboard navigation with `↑`/`↓`/`Enter`. Right-click: Rename, Delete (with confirmation).
+Sort by last modified (most recently edited at top — updates in real time when a note is saved). Keyboard navigation with `↑`/`↓`/`Enter`. Right-click context menu: **Rename**, **Delete** (with confirmation). No delete button in the toolbar — deletion is context-menu only.
 
 ### 13.2 Search
-Omnibar always visible. `Cmd/Ctrl+L` or `/` to focus. 150ms debounce. Match highlighting in list and editor. Saved searches (`Cmd/Ctrl+Shift+S`) persisted via config API.
+Omnibar always visible. `Cmd/Ctrl+L` or `/` to focus. 150ms debounce. Match highlighting in list and editor. Saved searches (`Cmd/Ctrl+Shift+S`) persisted via config API. Search is case-insensitive.
 
 ### 13.3 Note Editor
-CodeMirror 6 with Markdown mode. `[[` autocomplete for note links — selecting a note from the dropdown inserts its numeric ID (e.g. `[[202601280000]]`), which is stable across title renames. `#` autocomplete for tags. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable). Typewriter mode (`Cmd/Ctrl+Shift+T`).
+CodeMirror 6 with Markdown mode. `[[` autocomplete for note links — selecting a note from the dropdown inserts its numeric ID (e.g. `[[202601280000]]`), which is stable across title renames. The autocomplete label shows the filename (not H1 heading). `#` autocomplete for tags. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable).
+
+**Text formatting shortcuts** (work in editor):
+- `Cmd/Ctrl+B` — toggle bold (`**text**`)
+- `Cmd/Ctrl+I` — toggle italic (`*text*`)
+- `Cmd/Ctrl+U` — toggle underline (`<u>text</u>`)
+- `Cmd/Ctrl+K` — insert/toggle link (`[text](url)` or `[[wikilink]]`)
+- When the cursor is inside an already-formatted region, the shortcut removes the formatting (toggle).
+
+**Link decorations**: Inline Markdown links (`[text](url)`) collapse to show only the link text with a small expand icon. Hovering shows a tooltip with the full URL. Bare URLs are rendered as clickable links.
+
+**Image support**: Images drag-dropped into the editor are uploaded via `POST /api/v1/media` and inserted as `![filename](path)`. Images already in the notes directory render inline.
+
+**Block quotes**: Rendered in plain text (not italic) to match The Archive's style. Formatting marks (`##`, `*`, `_`) are rendered faded; list and quote marks are slightly darker.
 
 ### 13.4 Preview Mode
 Toggle Edit / Preview / Split with `Cmd/Ctrl+P`. Renders CommonMark + GFM. Images served via `/assets/:filename`. Wiki-links and `#tags` are clickable. External URLs open in new tab.
 
+**Preview title**: Derived from the filename — the timestamp ID prefix is stripped and the remainder is converted to sentence case (displayed above the note body).
+
+**Heading hierarchy**: `h1`–`h6` render with distinct sizes, weights, and spacing, consistent with CommonMark.
+
+**List styles**: Unordered lists use bullets; ordered lists use numbers (CSS `list-style` is not reset in preview).
+
+**Block quotes**: Displayed as plain text (not italic).
+
 ### 13.5 Note Creation
-`Cmd/Ctrl+N`. Client generates `YYYYMMDDHHMMSS` ID. First line becomes the filename title on first save.
+`Cmd/Ctrl+N` opens a **title prompt dialog**. The entered title becomes the filename (`YYYYMMDDHHMMSS Title.md`). The client generates the 14-digit ID (including seconds). The new file is pre-populated with a template (configurable in Settings) plus a backlink placeholder at the bottom. `Cmd/Ctrl+N` does **not** trigger note creation when focus is outside the main UI (e.g., when a dialog is open) — it is not bound to the browser's native new-window shortcut.
 
 ### 13.6 Note Deletion
-`Cmd/Ctrl+Delete` or context menu. Confirmation required. Server moves file to `_trash/` (not indexed). Manual recovery by moving files out of `_trash/`.
+Right-click context menu → **Delete**. Confirmation required. Server moves file to `_trash/` (not indexed). Manual recovery by moving files out of `_trash/`.
 
 ### 13.7 Note Renaming
-Context menu or `F2`. Inline edit. Server renames via `/notes/:id/rename`. Links are not auto-updated (consistent with The Archive).
+Right-click context menu → **Rename** or `F2`. Inline edit in the note list. Server renames via `/notes/:id/rename`. The renamed note remains visible in the list immediately (no disappear/reappear). Links are not auto-updated (consistent with The Archive).
 
 ### 13.8 Tags
 `Cmd/Ctrl+T` opens tags modal with note counts. Clicking a tag runs a search.
 
 ### 13.9 Navigation
+**URL scheme**: Navigating to a note updates the browser URL to `/note/:id`. Deep links and page refresh restore the correct note. Browser back/forward buttons and iPhone swipe-back gestures work correctly via `popstate`.
+
 Back/forward: `Cmd/Ctrl+[` / `Cmd/Ctrl+]`. Quick Open: `Cmd/Ctrl+O`. Follow link: `Cmd/Ctrl+Click` in editor, single click in preview. Backlinks panel: `Cmd/Ctrl+Shift+B`.
 
 ### 13.10 Settings Panel
-`Cmd/Ctrl+,`. Options: auto-save delay, show snippets, editor width, font size, note template, file extensions to index, dark mode override, change password.
+`Cmd/Ctrl+,`. Options: auto-save delay, show snippets, editor width, font size, **line spacing** (editor line height, default 1.6), note template, file extensions to index, dark mode override, change password, Syncthing device pairing.
+
+### 13.11 Background File Sync
+The SSE watcher detects files added, modified, or deleted on disk by Syncthing or any other external tool. Changes update individual note list entries in real time without a full list re-fetch. The edited note's position in the list reflects its new mtime immediately.
 
 ---
 
@@ -408,12 +456,13 @@ interface Config {
   passwordHash: string;
   savedSearches: Array<{ id: string; name: string; query: string }>;
   settings: {
-    autoSaveDelay: number;
-    showSnippets: boolean;
-    editorWidth: number;
-    fontSize: number;
-    noteTemplate: string;
-    indexExtensions: string[];
+    autoSaveDelay: number;    // ms, default 1000
+    showSnippets: boolean;    // show body snippet in note list
+    editorWidth: number;      // px, default 680
+    fontSize: number;         // px, default 13
+    lineHeight: number;       // unitless, default 1.6
+    noteTemplate: string;     // template body for new notes
+    indexExtensions: string[]; // default ['.md']
     darkMode: 'auto' | 'light' | 'dark';
   };
 }
@@ -451,12 +500,12 @@ npm install
 npm run setup
 
 # Start backend (auto-restarts on file change)
-NOTES_DIR=~/Documents/TestNotes SESSION_SECRET=devsecret npm run dev:server
-# runs: tsx watch server/index.ts on :3000
+NOTES_DIR=~/Documents/TestNotes SESSION_SECRET=devsecretdevsecretdevsecretdevsecret PORT=3001 npm run dev:server
+# runs: tsx watch server/index.ts on :3001
 
 # Start frontend (separate terminal)
 npm run dev
-# runs: vite on :5173, proxies /api/* to :3000
+# runs: vite on :5173, proxies /api/* to :3001
 ```
 
 Open `http://localhost:5173` in your browser.
@@ -469,7 +518,7 @@ Open `http://localhost:5173` in your browser.
 export default defineConfig({
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': 'http://localhost:3001',
     }
   }
 })
@@ -613,7 +662,6 @@ No dependency on the File System Access API. Works in all modern browsers.
 - Note encryption at rest
 - PDF / DOCX export
 - YAML front-matter parsing
-- Attachment upload (images served/previewed if already in notes folder; not uploadable via UI)
 - Custom themes or font selection
 - Vim / Emacs keybinding modes
 
@@ -624,72 +672,113 @@ No dependency on the File System Access API. Works in all modern browsers.
 ```
 annex/
 ├── server/
-│   ├── index.ts                  # Fastify entry, plugin registration, static serving
-│   ├── auth.ts                   # Login, session, rate limiting, CSRF
+│   ├── index.ts                  # Fastify entry, plugin registration, static serving, health check
+│   ├── auth.ts                   # Login, logout, password change, rate limiting, account lockout, CSRF
+│   ├── setup.ts                  # CLI: set initial password
 │   ├── routes/
-│   │   ├── notes.ts
-│   │   ├── search.ts
-│   │   ├── tags.ts
-│   │   ├── config.ts
+│   │   ├── notes.ts              # CRUD + backlinks + rename
+│   │   ├── search.ts             # Full-text search
+│   │   ├── tags.ts               # Tags with note counts
+│   │   ├── config.ts             # Settings + saved searches
 │   │   ├── assets.ts             # Serve images from notes dir
+│   │   ├── media.ts              # Image upload (multipart, max 20 MB)
+│   │   ├── sync.ts               # Syncthing API proxy
 │   │   └── events.ts             # SSE stream
-│   ├── lib/
-│   │   ├── noteIndex.ts          # In-memory Flexsearch index
-│   │   ├── noteParser.ts         # Extract title, tags, wikilinks
-│   │   ├── fileStore.ts          # Read/write/delete/rename with path safety
-│   │   ├── watcher.ts            # chokidar + SSE broadcasting
-│   │   └── config.ts             # Read/write _annex.json
-│   └── setup.ts                  # CLI: set initial password
+│   └── lib/
+│       ├── searchIndex.ts        # In-memory Flexsearch index (phrases, tags, NOT, case-insensitive)
+│       ├── noteParser.ts         # Extract title, snippet, tags, wikilinks from note body
+│       ├── fileStore.ts          # Read/write/delete/rename with path safety + atomic writes
+│       ├── sessionStore.ts       # File-backed session persistence (~/.annex/sessions.json)
+│       ├── watcher.ts            # chokidar + SSE client registry + ping loop
+│       ├── backup.ts             # Hourly snapshots of NOTES_DIR, pruned to 7 copies
+│       └── config.ts             # Read/write _annex.json (settings, saved searches, password hash)
 ├── src/
 │   ├── main.tsx
 │   ├── App.tsx
+│   ├── types.ts                  # NoteIndex, NoteDetail, SearchResult interfaces
 │   ├── api/
-│   │   ├── client.ts             # Typed fetch wrapper (401 → redirect)
-│   │   ├── notes.ts
-│   │   ├── search.ts
-│   │   └── events.ts             # SSE hook
+│   │   ├── client.ts             # apiFetch wrapper (CSRF token, 401 → redirect)
+│   │   ├── sync.ts               # Syncthing API calls
+│   │   └── uploadImage.ts        # POST /media multipart upload
 │   ├── store/
-│   │   └── useStore.ts
+│   │   └── useStore.ts           # Zustand global state (notes, search, history, settings, conflict)
 │   ├── components/
+│   │   ├── AppLayout.tsx         # Two-pane layout, divider, collapse
 │   │   ├── LoginPage.tsx
-│   │   ├── Toolbar.tsx
-│   │   ├── SearchBar.tsx
-│   │   ├── NoteList.tsx
-│   │   ├── NoteListItem.tsx
-│   │   ├── Editor.tsx
-│   │   ├── Preview.tsx
-│   │   ├── TagsModal.tsx
-│   │   ├── BacklinksPanel.tsx
-│   │   ├── QuickOpen.tsx
-│   │   └── Settings.tsx
+│   │   ├── Toolbar.tsx           # Format buttons, save indicator, word count
+│   │   ├── NoteList.tsx          # Searchable sidebar list + right-click context menu
+│   │   ├── EditorPane.tsx        # Edit/Preview/Split tabs
+│   │   ├── CodeMirrorEditor.tsx  # CodeMirror 6 wrapper
+│   │   ├── Preview.tsx           # Rendered Markdown (marked + DOMPurify)
+│   │   ├── SettingsPanel.tsx     # All settings + Syncthing pairing
+│   │   ├── TagsModal.tsx         # Browse tags, click to search
+│   │   ├── BacklinksPanel.tsx    # Incoming link list
+│   │   ├── QuickOpen.tsx         # Cmd+O note search modal
+│   │   ├── NewNoteDialog.tsx     # Title prompt for new note
+│   │   ├── ConflictDialog.tsx    # Etag conflict resolution (keep local / use server)
+│   │   ├── ContextMenu.tsx       # Right-click → Rename / Delete
+│   │   ├── KeyboardHelp.tsx      # Keyboard shortcut overlay
+│   │   └── TabBar.tsx            # Multi-tab / search results
+│   ├── editor/
+│   │   ├── setup.ts              # Compose CodeMirror extensions
+│   │   ├── theme.ts              # Dark/light theme, faded formatting marks
+│   │   ├── keymaps.ts            # Cmd+B/I/U/K formatting toggle
+│   │   ├── autocomplete.ts       # [[ and # autocomplete
+│   │   ├── wikilinks.ts          # Parse [[wikilinks]] for autocomplete
+│   │   ├── linkDecorations.ts    # Collapse/expand inline links, hover tooltip
+│   │   ├── imageDecorations.ts   # Inline image preview
+│   │   ├── imageUpload.ts        # Drag-drop → POST /media
+│   │   ├── listIndent.ts         # Smart Tab/Shift+Tab list indent
+│   │   └── searchHighlight.ts    # Highlight current search query in editor
 │   ├── hooks/
-│   │   ├── useKeyboard.ts
-│   │   ├── useNoteNavigation.ts
-│   │   ├── useAutoSave.ts
-│   │   └── useSSE.ts
+│   │   ├── useAutoSave.ts        # Debounced PUT /notes/:id
+│   │   ├── useNoteNavigation.ts  # /note/:id URL scheme + popstate
+│   │   └── useSSE.ts             # SSE connection with exponential-backoff reconnect
 │   ├── theme/
 │   │   └── index.css             # CSS custom properties, light + dark
 │   └── utils/
-│       ├── noteId.ts
-│       ├── titleExtract.ts
-│       └── debounce.ts
+│       └── searchTerms.ts        # Query parsing helpers
+├── test/                         # Backend unit tests (vitest)
+│   ├── setup.ts                  # Test server factory
+│   ├── notes-api.test.ts
+│   ├── auth-routes.test.ts
+│   ├── content-integrity.test.ts
+│   ├── file-store.test.ts
+│   ├── search-api.test.ts
+│   ├── tags-backlinks.test.ts
+│   ├── session-persistence.test.ts
+│   ├── account-lockout.test.ts
+│   ├── csrf.test.ts
+│   ├── backup.test.ts
+│   ├── watcher.test.ts
+│   └── sync-api.test.ts
+├── e2e/                          # End-to-end tests (Playwright, Chromium)
+│   ├── auth.setup.ts             # One-time login, saves session for all tests
+│   ├── fixtures/                 # Seeded notes + teardown helpers
+│   └── *.spec.ts                 # Feature-level test suites
+├── public/
+│   ├── favicon.svg / favicon.ico
+│   └── site.webmanifest          # PWA manifest
 ├── index.html
 ├── vite.config.ts
 ├── tsconfig.json
-├── tailwind.config.ts
-├── Makefile                     # Orchestrates Terraform + Ansible
-├── deploy.sh.example            # Template for env vars
+├── vitest.config.ts
+├── playwright.config.ts
+├── eslint.config.js
+├── Makefile                      # Orchestrates Terraform + Ansible
+├── deploy.sh.example             # Template for env vars
 ├── ansible/
 │   ├── ansible.cfg
-│   ├── provision.yml            # First-time VPS setup + hardening
-│   ├── deploy.yml               # Build + deploy app
-│   ├── group_vars/all.yml       # Shared variables
+│   ├── provision.yml             # First-time VPS setup + hardening
+│   ├── deploy.yml                # Build + deploy app (npm audit + smoke test)
+│   ├── group_vars/all.yml        # Shared variables
 │   ├── inventory.ini
 │   └── templates/
 │       ├── Caddyfile.j2
-│       └── ecosystem.config.cjs.j2
+│       ├── ecosystem.config.cjs.j2
+│       └── logrotate-annex.j2    # PM2 log rotation (daily, 14-day retention)
 ├── terraform/
-│   ├── main.tf                  # Droplet + firewall
+│   ├── main.tf                   # Droplet + cloud firewall
 │   ├── variables.tf
 │   ├── outputs.tf
 │   └── terraform.tfvars.example
@@ -806,4 +895,4 @@ Open: http://localhost:5173
 
 ---
 
-*Spec version: 3.1 — March 2026*
+*Spec version: 3.2 — March 2026*
