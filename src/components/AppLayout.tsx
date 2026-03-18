@@ -103,6 +103,20 @@ export default function AppLayout() {
     return () => document.removeEventListener('keydown', handler);
   }, [setFileListHidden]);
 
+  // Cmd+N — open new window in standalone (docked app) mode
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    if (!isStandalone) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        window.open(window.location.origin, '_blank');
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     dragging.current = true;
