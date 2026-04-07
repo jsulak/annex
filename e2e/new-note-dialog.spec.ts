@@ -55,8 +55,9 @@ test.describe('New note dialog', () => {
     expect(notesAfter).toBe(notesBefore);
   });
 
-  test('Cmd+N opens the new note dialog', async ({ page }) => {
+  test('Cmd+N does NOT open the new note dialog (reserved for new window)', async ({ page }) => {
     await page.keyboard.press('Meta+n');
-    await expect(page.locator('input[placeholder="Note title..."]')).toBeVisible({ timeout: 5_000 });
+    await page.waitForTimeout(300);
+    await expect(page.locator('input[placeholder="Note title..."]')).not.toBeVisible();
   });
 });

@@ -8,7 +8,7 @@ const shortcuts: Array<{ keys: string; desc: string }> = [
   { keys: `${mod}+L`, desc: 'Focus search' },
   { keys: '/', desc: 'Focus search (when not editing)' },
   { keys: 'Escape', desc: 'Deselect note / clear search' },
-  { keys: `${mod}+N / +`, desc: 'New note' },
+  { keys: '+', desc: 'New note' },
   { keys: `${mod}+S`, desc: 'Save now' },
   { keys: `${mod}+Backspace`, desc: 'Delete note' },
   { keys: `${mod}+M`, desc: 'Cycle view mode' },
