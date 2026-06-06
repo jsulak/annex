@@ -103,6 +103,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Conflict detection (etag, If-Match, 409 handling)
 - [x] Tags modal + Backlinks panel
 - [x] Settings panel (all options via PUT /config, live font size)
+- [x] Org-like editor formatting setting (hide Markdown markers, heading body indent)
 - [x] Delete button in editor pane + fixed deletion (apiFetch Content-Type fix)
 - [x] Wiki-link autocomplete inserts note ID instead of title
 - [x] Faded markdown formatting marks (##, *, _) with darker list/quote marks

@@ -12,6 +12,7 @@ interface Settings {
   indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
   lineHeight: number;
+  hideMarkdownMarkup: boolean;
 }
 
 interface HealthData {
@@ -260,6 +261,31 @@ export default function SettingsPanel() {
     setSettings((s) => s ? { ...s, [key]: value } : s);
   };
 
+  const handleHideMarkdownMarkupChange = (checked: boolean) => {
+    if (!settings) return;
+
+    update('hideMarkdownMarkup', checked);
+    const currentAppSettings = useStore.getState().appSettings ?? settings;
+    setAppSettings({ ...currentAppSettings, hideMarkdownMarkup: checked });
+
+    void (async () => {
+      try {
+        const res = await apiFetch('/api/v1/config', {
+          method: 'PUT',
+          body: JSON.stringify({ settings: { hideMarkdownMarkup: checked } }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAppSettings(data.settings);
+        } else {
+          setMessage({ text: 'Save failed', error: true });
+        }
+      } catch {
+        setMessage({ text: 'Network error', error: true });
+      }
+    })();
+  };
+
   return (
     <div
       onClick={close}
@@ -372,6 +398,18 @@ export default function SettingsPanel() {
                 style={inputStyle}
               />
             </div>
+
+            {/* Hide Markdown formatting markers */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={settings.hideMarkdownMarkup ?? false}
+                onChange={(e) => handleHideMarkdownMarkupChange(e.target.checked)}
+              />
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-primary)' }}>
+                Hide Markdown formatting markers
+              </span>
+            </label>
 
             {/* Note template */}
             <div>

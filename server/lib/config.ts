@@ -13,6 +13,7 @@ export interface Config {
     indexExtensions: string[];
     darkMode: 'auto' | 'light' | 'dark';
     lineHeight: number;
+    hideMarkdownMarkup: boolean;
   };
 }
 
@@ -28,6 +29,7 @@ const DEFAULT_CONFIG: Config = {
     indexExtensions: ['.md'],
     darkMode: 'auto',
     lineHeight: 1.6,
+    hideMarkdownMarkup: false,
   },
 };
 

@@ -30,6 +30,7 @@ export interface AppSettings {
   indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
   lineHeight: number;
+  hideMarkdownMarkup: boolean;
 }
 
 function applySettingsToDOM(settings: AppSettings) {

@@ -1,7 +1,14 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { createExtensions, setSearchTermsEffect, type EditorCallbacks, type UploadStatus } from '../editor/setup.js';
+import {
+  createExtensions,
+  editorDisplayExtensions,
+  editorDisplaySettingsCompartment,
+  setSearchTermsEffect,
+  type EditorCallbacks,
+  type UploadStatus,
+} from '../editor/setup.js';
 import { saveKeymap } from '../editor/keymaps.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 import { parseSearchTerms } from '../utils/searchTerms.js';
@@ -17,6 +24,7 @@ interface Props {
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
   focusRequest?: number;
   searchQuery?: string;
+  hideMarkdownMarkup?: boolean;
 }
 
 export default function CodeMirrorEditor({
@@ -30,6 +38,7 @@ export default function CodeMirrorEditor({
   insertRef,
   focusRequest,
   searchQuery,
+  hideMarkdownMarkup = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -95,12 +104,16 @@ export default function CodeMirrorEditor({
     onUploadStatus: stableOnUploadStatus,
   }), [stableOnUpdate, stableOnNavigate, stableOnSearchTag, stableProviders, stableOnUploadStatus]);
 
+  const buildDisplayOptions = useCallback(() => ({
+    hideMarkdownMarkup,
+  }), [hideMarkdownMarkup]);
+
   // Create editor view once on mount
   useEffect(() => {
     if (!containerRef.current) return;
 
     const extensions = [
-      ...createExtensions(buildCallbacks()),
+      ...createExtensions(buildCallbacks(), buildDisplayOptions()),
       saveKeymap(stableSaveNow),
     ];
 
@@ -138,6 +151,17 @@ export default function CodeMirrorEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount once
 
+  // Reconfigure display-only extensions without rebuilding editor state.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: editorDisplaySettingsCompartment.reconfigure(
+        editorDisplayExtensions(buildDisplayOptions()),
+      ),
+    });
+  }, [buildDisplayOptions]);
+
   // Update search highlights when searchQuery changes
   useEffect(() => {
     const view = viewRef.current;
@@ -167,7 +191,7 @@ export default function CodeMirrorEditor({
     const newState = EditorState.create({
       doc,
       extensions: [
-        ...createExtensions(buildCallbacks()),
+        ...createExtensions(buildCallbacks(), buildDisplayOptions()),
         saveKeymap(stableSaveNow),
       ],
     });
@@ -180,7 +204,7 @@ export default function CodeMirrorEditor({
     if (terms.length > 0) {
       view.dispatch({ effects: setSearchTermsEffect.of(terms) });
     }
-  }, [doc, buildCallbacks, stableSaveNow]);
+  }, [doc, buildCallbacks, buildDisplayOptions, stableSaveNow]);
 
   return (
     <div

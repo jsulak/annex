@@ -1,3 +1,5 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import { startTestServer, stopTestServer, api, nextId, type TestContext } from './setup.js';
 
@@ -74,6 +76,44 @@ describe('path traversal prevention', () => {
 });
 
 describe('config API safety', () => {
+  test('GET /config includes hideMarkdownMarkup', async () => {
+    const res = await http.get('/api/v1/config');
+    expect(res.ok).toBe(true);
+    const config = await res.json();
+
+    expect(config.settings.hideMarkdownMarkup).toBe(false);
+  });
+
+  test('old config files receive hideMarkdownMarkup default', async () => {
+    const configPath = path.join(ctx.notesDir, '_annex.json');
+    const original = await fs.readFile(configPath, 'utf-8');
+    const originalConfig = JSON.parse(original);
+
+    try {
+      await fs.writeFile(configPath, JSON.stringify({
+        passwordHash: originalConfig.passwordHash,
+        savedSearches: [],
+        settings: {
+          autoSaveDelay: 750,
+          showSnippets: true,
+          editorWidth: 720,
+          fontSize: 14,
+          noteTemplate: '',
+          indexExtensions: ['.md'],
+          darkMode: 'auto',
+        },
+      }));
+
+      const res = await http.get('/api/v1/config');
+      expect(res.ok).toBe(true);
+      const config = await res.json();
+      expect(config.settings.hideMarkdownMarkup).toBe(false);
+      expect(config.settings.lineHeight).toBe(1.6);
+    } finally {
+      await fs.writeFile(configPath, original);
+    }
+  });
+
   test('GET /config never exposes passwordHash', async () => {
     const res = await http.get('/api/v1/config');
     expect(res.ok).toBe(true);
@@ -100,16 +140,22 @@ describe('config API safety', () => {
   test('PUT /config preserves unmodified settings', async () => {
     const before = await (await http.get('/api/v1/config')).json();
 
-    await http.put('/api/v1/config', { settings: { fontSize: 15 } });
+    await http.put('/api/v1/config', { settings: { fontSize: 15, hideMarkdownMarkup: true } });
 
     const after = await (await http.get('/api/v1/config')).json();
     expect(after.settings.fontSize).toBe(15);
+    expect(after.settings.hideMarkdownMarkup).toBe(true);
     expect(after.settings.editorWidth).toBe(before.settings.editorWidth);
     expect(after.settings.autoSaveDelay).toBe(before.settings.autoSaveDelay);
     expect(after.settings.darkMode).toBe(before.settings.darkMode);
 
     // Restore
-    await http.put('/api/v1/config', { settings: { fontSize: before.settings.fontSize } });
+    await http.put('/api/v1/config', {
+      settings: {
+        fontSize: before.settings.fontSize,
+        hideMarkdownMarkup: before.settings.hideMarkdownMarkup,
+      },
+    });
   });
 });
 

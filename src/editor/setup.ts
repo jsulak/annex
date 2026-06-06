@@ -1,4 +1,4 @@
-import type { Extension } from '@codemirror/state';
+import { Compartment, type Extension } from '@codemirror/state';
 import { keymap, placeholder } from '@codemirror/view';
 import { EditorView } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentLess, insertTab } from '@codemirror/commands';
@@ -10,11 +10,12 @@ import { zettelTheme, zettelHighlight, listMarkTag, quoteMarkTag } from './theme
 import { wikiLinks } from './wikilinks.js';
 import { zettelAutocomplete, type CompletionProviders } from './autocomplete.js';
 import { formattingKeymap } from './keymaps.js';
-import { listIndent } from './listIndent.js';
+import { editorIndentDecorations } from './listIndent.js';
 import { linkDecorations } from './linkDecorations.js';
 import { imageDecorations } from './imageDecorations.js';
 import { imageUpload, type UploadStatus } from './imageUpload.js';
 import { searchHighlightField } from './searchHighlight.js';
+import { markdownMarkupDecorations } from './markdownMarkupDecorations.js';
 
 export { setSearchTermsEffect } from './searchHighlight.js';
 
@@ -27,6 +28,19 @@ export interface EditorCallbacks {
 }
 
 export type { UploadStatus };
+
+export interface EditorDisplayOptions {
+  hideMarkdownMarkup: boolean;
+}
+
+export const editorDisplaySettingsCompartment = new Compartment();
+
+export function editorDisplayExtensions(options: EditorDisplayOptions): Extension {
+  return [
+    editorIndentDecorations(options.hideMarkdownMarkup),
+    markdownMarkupDecorations(options.hideMarkdownMarkup),
+  ];
+}
 
 // Matches a list marker with leading whitespace: "  - ", "* ", "1. ", etc.
 const listLineRe = /^(\s*)([-*+]|\d+[.)]) /;
@@ -74,7 +88,10 @@ function smartListIndent(view: EditorView): boolean {
   return true;
 }
 
-export function createExtensions(callbacks: EditorCallbacks): Extension[] {
+export function createExtensions(
+  callbacks: EditorCallbacks,
+  displayOptions: EditorDisplayOptions = { hideMarkdownMarkup: false },
+): Extension[] {
   return [
     markdown({
       codeLanguages: languages,
@@ -106,7 +123,7 @@ export function createExtensions(callbacks: EditorCallbacks): Extension[] {
       ...historyKeymap,
     ]),
     placeholder('Start writing...'),
-    listIndent,
+    editorDisplaySettingsCompartment.of(editorDisplayExtensions(displayOptions)),
     wikiLinks(callbacks.onNavigate, callbacks.onSearchTag),
     linkDecorations(),
     imageDecorations(),

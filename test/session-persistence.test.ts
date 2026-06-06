@@ -57,6 +57,7 @@ beforeAll(async () => {
     settings: {
       autoSaveDelay: 500, showSnippets: false, editorWidth: 680,
       fontSize: 13, noteTemplate: '', indexExtensions: ['.md'], darkMode: 'auto',
+      lineHeight: 1.6, hideMarkdownMarkup: false,
     },
   };
   await fs.writeFile(path.join(notesDir, '_annex.json'), JSON.stringify(config));

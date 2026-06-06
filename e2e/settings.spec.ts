@@ -1,4 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
+
+async function csrfHeaders(request: APIRequestContext) {
+  const res = await request.get('/api/v1/auth/csrf-token');
+  expect(res.ok()).toBe(true);
+  const data = await res.json() as { token: string };
+  return { 'x-csrf-token': data.token };
+}
 
 test.describe.configure({ mode: 'serial' });
 
@@ -63,7 +70,7 @@ test.describe('Settings panel', () => {
     await page.locator('button[title="Settings (Cmd+,)"]').click();
     await expect(page.getByText('Show snippets in note list')).toBeVisible({ timeout: 3_000 });
 
-    const checkbox = page.locator('input[type="checkbox"]');
+    const checkbox = page.getByRole('checkbox', { name: 'Show snippets in note list' });
     await expect(checkbox).toBeVisible();
   });
 
@@ -82,6 +89,12 @@ test.describe('Settings panel', () => {
     const lineHeightInput = page.locator('input[type="number"][min="1"][max="3"]');
     await expect(lineHeightInput).toBeVisible();
     await expect(lineHeightInput).toHaveValue(/[\d.]+/);
+  });
+
+  test('shows hide Markdown formatting markers checkbox', async ({ page }) => {
+    await page.locator('button[title="Settings (Cmd+,)"]').click();
+
+    await expect(page.getByLabel('Hide Markdown formatting markers')).toBeVisible({ timeout: 3_000 });
   });
 
   test('line height setting applies CSS variable to editor', async ({ page }) => {
@@ -117,12 +130,14 @@ test.describe('Settings API', () => {
     expect(data.settings).toHaveProperty('fontSize');
     expect(data.settings).toHaveProperty('darkMode');
     expect(data.settings).toHaveProperty('lineHeight');
+    expect(data.settings).toHaveProperty('hideMarkdownMarkup');
     // passwordHash should NOT be exposed
     expect(data).not.toHaveProperty('passwordHash');
   });
 
   test('PUT /api/v1/config updates settings', async ({ request }) => {
     const response = await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
       data: {
         settings: { fontSize: 15 },
       },
@@ -133,12 +148,14 @@ test.describe('Settings API', () => {
 
     // Restore original
     await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
       data: { settings: { fontSize: 13 } },
     });
   });
 
   test('PUT /api/v1/config updates lineHeight', async ({ request }) => {
     const response = await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
       data: { settings: { lineHeight: 2.0 } },
     });
     expect(response.ok()).toBe(true);
@@ -147,12 +164,33 @@ test.describe('Settings API', () => {
 
     // Restore original
     await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
       data: { settings: { lineHeight: 1.6 } },
+    });
+  });
+
+  test('PUT /api/v1/config updates hideMarkdownMarkup and preserves other settings', async ({ request }) => {
+    const before = await (await request.get('/api/v1/config')).json();
+
+    const response = await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
+      data: { settings: { hideMarkdownMarkup: true } },
+    });
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.settings.hideMarkdownMarkup).toBe(true);
+    expect(data.settings.fontSize).toBe(before.settings.fontSize);
+    expect(data.settings.lineHeight).toBe(before.settings.lineHeight);
+
+    await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
+      data: { settings: { hideMarkdownMarkup: before.settings.hideMarkdownMarkup } },
     });
   });
 
   test('PUT /api/v1/config rejects missing settings', async ({ request }) => {
     const response = await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
       data: {},
     });
     expect(response.status()).toBe(400);

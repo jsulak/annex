@@ -116,6 +116,7 @@ export default function EditorPane() {
   const searchQuery = useStore((s) => s.searchQuery);
   const fileListHidden = useStore((s) => s.fileListHidden);
   const setFileListHidden = useStore((s) => s.setFileListHidden);
+  const hideMarkdownMarkup = useStore((s) => s.appSettings?.hideMarkdownMarkup ?? false);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
@@ -309,6 +310,7 @@ export default function EditorPane() {
               insertRef={insertRef}
               focusRequest={editorFocusRequest}
               searchQuery={searchQuery}
+              hideMarkdownMarkup={hideMarkdownMarkup}
             />
           </div>
         )}

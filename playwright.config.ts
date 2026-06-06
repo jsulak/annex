@@ -23,6 +23,8 @@ const config = {
     noteTemplate: '',
     indexExtensions: ['.md'],
     darkMode: 'auto',
+    lineHeight: 1.6,
+    hideMarkdownMarkup: false,
   },
 };
 fs.writeFileSync(path.join(tmpDir, '_annex.json'), JSON.stringify(config, null, 2));
