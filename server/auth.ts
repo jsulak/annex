@@ -116,7 +116,12 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
 
   // Logout route
   app.post('/api/v1/auth/logout', async (request: FastifyRequest, reply: FastifyReply) => {
-    void request.session.destroy();
+    await new Promise<void>((resolve, reject) => {
+      request.session.destroy((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
     return reply.send({ ok: true });
   });
 

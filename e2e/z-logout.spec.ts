@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import path from 'path';
+import { apiPost } from './helpers/api';
 
 const tmpAuth = path.join(import.meta.dirname, '.auth', 'logout-test.json');
 
@@ -46,7 +47,7 @@ test.describe('Logout', () => {
     expect(loginRes.ok()).toBe(true);
 
     // Logout
-    const logoutRes = await context.request.post('/api/v1/auth/logout');
+    const logoutRes = await apiPost(context.request, '/api/v1/auth/logout');
     expect(logoutRes.ok()).toBe(true);
 
     // Subsequent API call should fail

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Wiki-link autocomplete shows filename', () => {
   const testNoteId = '209901020000';

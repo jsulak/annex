@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Background file sync — UI updates', () => {
   test('note list shows notes created via API after refresh', async ({ page, request }) => {

@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext } from '@playwright/test';
+import { test, expect, type APIRequestContext } from './fixtures';
 
 async function csrfHeaders(request: APIRequestContext) {
   const res = await request.get('/api/v1/auth/csrf-token');

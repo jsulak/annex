@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Preview heading hierarchy', () => {
   test('h1, h2, h3 render with distinct sizes and proper spacing', async ({ page, request }) => {

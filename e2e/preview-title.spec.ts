@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Preview title from filename', () => {
   test('preview shows formatted title from filename', async ({ page }) => {
@@ -6,7 +6,7 @@ test.describe('Preview title from filename', () => {
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
     // The seed note filename is "202401151432 Sample Note.md"
-    // Expected title: "Sample note" (sentence case, timestamp stripped)
+    // Expected title: timestamp stripped, filename capitalization preserved
     await page.locator('#note-list').getByText('202401151432 Sample Note').click();
     await expect(page.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
 
@@ -17,6 +17,6 @@ test.describe('Preview title from filename', () => {
     // The formatted title should appear
     const titleEl = preview.locator('.preview-title');
     await expect(titleEl).toBeVisible();
-    await expect(titleEl).toHaveText('Sample note');
+    await expect(titleEl).toHaveText('Sample Note');
   });
 });

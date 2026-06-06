@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Note list sorting by last modified', () => {
   test('editing a note moves it to the top of the list', async ({ page }) => {

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Preview list rendering', () => {
   test('unordered lists show bullets', async ({ page, request }) => {

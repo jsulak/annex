@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Case-insensitive search', () => {
   test('lowercase query finds title-case text', async ({ page, request }) => {

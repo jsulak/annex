@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import os from 'os';
 
 // CodeMirror's Mod maps to Meta on Mac, Control on Linux/Windows

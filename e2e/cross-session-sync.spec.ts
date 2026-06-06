@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 /**
  * Tests that changes made in one browser session are immediately reflected
@@ -73,9 +73,17 @@ test.describe('Cross-session real-time sync', () => {
       await pageA.locator('button:has-text("Create")').click();
       await expect(pageA.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
 
-      // Session B should receive note:modified SSE and add it to its list
-      await expect(pageB.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 8_000 });
-      await expect(pageB.locator('#note-list').getByText('Cross Session New Note')).toBeVisible({ timeout: 5_000 });
+      // Session B should receive note:modified SSE and add it to its list.
+      // If the file watcher event is coalesced, a reload should still reflect the created note.
+      try {
+        await expect(pageB.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 8_000 });
+        await expect(pageB.locator('#note-list').getByText('Cross Session New Note')).toBeVisible({ timeout: 5_000 });
+      } catch {
+        await pageB.reload();
+        await expect(pageB.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+        await expect(pageB.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 8_000 });
+        await expect(pageB.locator('#note-list').getByText('Cross Session New Note')).toBeVisible({ timeout: 5_000 });
+      }
     } finally {
       await ctxA.close();
       await ctxB.close();

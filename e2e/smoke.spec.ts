@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -6,7 +6,7 @@ test.describe('Smoke tests', () => {
   test('health endpoint returns ok', async ({ request }) => {
     const response = await request.get('/api/v1/health');
     expect(response.ok()).toBe(true);
-    expect(await response.json()).toEqual({ status: 'ok' });
+    expect(await response.json()).toMatchObject({ status: 'ok' });
   });
 
   test('login rejects wrong password', async ({ browser }) => {

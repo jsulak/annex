@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 const THRESHOLD = 60;
 const RESISTANCE = 0.5;
