@@ -150,4 +150,5 @@ The Sync section will show "Syncthing is not configured on this server." Run `ma
 ## Documentation
 
 - [SPEC.md](SPEC.md) — full application specification
-- [CLAUDE.md](CLAUDE.md) — development instructions and current status
+- [CLAUDE.md](CLAUDE.md) — Claude Code development instructions and current status
+- [AGENTS.md](AGENTS.md) — Codex entrypoint that delegates to the same project brief
