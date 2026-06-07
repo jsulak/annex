@@ -8,7 +8,6 @@ const MIME_TYPES: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
   '.mp4': 'video/mp4',
   '.mp3': 'audio/mpeg',
@@ -34,8 +33,12 @@ export async function registerAssets(app: FastifyInstance, notesDir: string) {
     }
 
     try {
-      const data = await fs.readFile(resolved);
       const ext = path.extname(rawPath).toLowerCase();
+      if (ext === '.svg') {
+        return reply.status(403).send({ error: 'File type not allowed' });
+      }
+
+      const data = await fs.readFile(resolved);
       const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
       return reply.type(contentType).send(data);
     } catch {

@@ -3,7 +3,7 @@ import multipart from '@fastify/multipart';
 import path from 'node:path';
 import { writeMediaFile } from '../lib/fileStore.js';
 
-const ALLOWED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']);
+const ALLOWED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 /** Sanitize an uploaded filename and prepend a timestamp to avoid collisions. */

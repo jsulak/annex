@@ -1,6 +1,7 @@
 TERRAFORM_DIR = terraform
 ANSIBLE_DIR = ansible
 APP_USER ?= annex
+PROVISION_USER ?= root
 DOMAIN ?=
 EXTRA_VARS := $(if $(DOMAIN),-e "domain=$(DOMAIN)",)
 
@@ -33,16 +34,16 @@ wait-for-ssh:
 	done; echo "Error: SSH not available after 60s" && exit 1
 
 ## Ansible
-# Provision: first run uses root (FIRST_RUN=1), subsequent runs use annex with sudo.
+# Provision requires a privileged SSH user. The app user is intentionally not sudo-capable.
 #   First time:  FIRST_RUN=1 make provision
-#   After that:  make provision
+#   Later privileged changes: PROVISION_USER=<admin-user> make provision
 provision:
 	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
 ifdef FIRST_RUN
 	cd $(ANSIBLE_DIR) && ANSIBLE_HOST_KEY_CHECKING=false ansible-playbook provision.yml -i '$(IP),' -u root --private-key=~/.ssh/$(TF_VAR_ssh_key_name) $(EXTRA_VARS)
 else
-	cd $(ANSIBLE_DIR) && ansible-playbook provision.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) $(EXTRA_VARS)
+	cd $(ANSIBLE_DIR) && ansible-playbook provision.yml -i '$(IP),' -u $(PROVISION_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) $(EXTRA_VARS)
 endif
 
 # Deploy runs as the app user (annex).

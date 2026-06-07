@@ -68,6 +68,13 @@ describe('POST /api/v1/media', () => {
     expect(res.status).toBe(400);
   });
 
+  test('rejects SVG uploads', async () => {
+    const form = new FormData();
+    form.append('file', new Blob(['<svg><script>alert(1)</script></svg>'], { type: 'image/svg+xml' }), 'evil.svg');
+    const res = await http.postMultipart('/api/v1/media', form);
+    expect(res.status).toBe(400);
+  });
+
   test('rejects missing file part', async () => {
     const res = await http.postMultipart('/api/v1/media', new FormData());
     expect(res.status).toBe(400);

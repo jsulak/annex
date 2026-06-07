@@ -20,6 +20,7 @@ beforeAll(async () => {
     'hex',
   );
   fs.writeFileSync(path.join(mediaDir, 'test.png'), pngBytes);
+  fs.writeFileSync(path.join(mediaDir, 'evil.svg'), '<svg><script>alert(1)</script></svg>');
   fs.writeFileSync(path.join(ctx.notesDir, 'plain.txt'), 'hello text');
 });
 
@@ -44,6 +45,11 @@ describe('GET /api/v1/assets/*', () => {
   test('returns 404 for nonexistent asset', async () => {
     const res = await http.get('/api/v1/assets/media/nonexistent.png');
     expect(res.status).toBe(404);
+  });
+
+  test('rejects SVG assets', async () => {
+    const res = await http.get('/api/v1/assets/media/evil.svg');
+    expect(res.status).toBe(403);
   });
 
   test('rejects path traversal attempts', async () => {

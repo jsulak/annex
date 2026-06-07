@@ -3,7 +3,7 @@ import { type Extension } from '@codemirror/state';
 import { uploadImage, UploadError } from '../api/uploadImage.js';
 
 const ALLOWED_IMAGE_TYPES = new Set([
-  'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp',
 ]);
 
 function isImageFile(file: File): boolean {

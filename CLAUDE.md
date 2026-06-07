@@ -134,6 +134,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Response compression (gzip/brotli via @fastify/compress)
 - [x] Static asset cache headers (1yr for hashed assets, no-cache for index.html)
 - [x] npm audit --audit-level=high in deploy playbook (blocks deploy on high/critical)
+- [x] Security audit high-severity remediation (block SVG serving/uploads, remove app-user passwordless sudo)
 
 
 ## Testing
