@@ -42,17 +42,23 @@ async function buildTestApp(store: FileSessionStore): Promise<FastifyInstance> {
     if (request.url === '/api/v1/auth/login') return done();
     return app.csrfProtection(request, reply, done);
   });
-  await registerAuth(app, notesDir, { loginDelayMs: 0, rateLimitMax: 100 });
+  await registerAuth(app, notesDir, {
+    loginDelayMs: 0,
+    rateLimitMax: 100,
+    invalidateAllSessions: () => store.destroyAll(),
+  });
   app.get('/api/v1/health', async () => ({ status: 'ok' }));
+  app.get('/api/v1/auth/csrf-token', async (_request, reply) => {
+    const token = await reply.generateCsrf();
+    return reply.send({ token });
+  });
   await app.listen({ port: 0, host: '127.0.0.1' });
   return app;
 }
 
-beforeAll(async () => {
-  notesDir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-session-test-'));
-  sessionsFile = path.join(notesDir, 'sessions.json');
+async function writeConfig(passwordHash = PASSWORD_HASH): Promise<void> {
   const config = {
-    passwordHash: PASSWORD_HASH,
+    passwordHash,
     savedSearches: [],
     settings: {
       autoSaveDelay: 500, showSnippets: false, editorWidth: 680,
@@ -61,6 +67,32 @@ beforeAll(async () => {
     },
   };
   await fs.writeFile(path.join(notesDir, '_annex.json'), JSON.stringify(config));
+}
+
+async function login(base: string, password = PASSWORD): Promise<{ cookie: string; csrfToken: string }> {
+  const loginRes = await fetch(`${base}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  expect(loginRes.ok).toBe(true);
+  const setCookie = loginRes.headers.get('set-cookie') ?? '';
+  const cookie = setCookie.split(';')[0];
+  expect(cookie).toBeTruthy();
+
+  const csrfRes = await fetch(`${base}/api/v1/auth/csrf-token`, {
+    headers: { Cookie: cookie },
+  });
+  expect(csrfRes.ok).toBe(true);
+  const { token: csrfToken } = await csrfRes.json() as { token: string };
+  expect(csrfToken).toBeTruthy();
+  return { cookie, csrfToken };
+}
+
+beforeAll(async () => {
+  notesDir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-session-test-'));
+  sessionsFile = path.join(notesDir, 'sessions.json');
+  await writeConfig();
   process.env.NOTES_DIR = notesDir;
 });
 
@@ -78,15 +110,7 @@ describe('session persistence', () => {
     const base1 = `http://${addr1.address}:${addr1.port}`;
 
     // 2. Login — establishes a session
-    const loginRes = await fetch(`${base1}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: PASSWORD }),
-    });
-    expect(loginRes.ok).toBe(true);
-    const setCookie = loginRes.headers.get('set-cookie') ?? '';
-    const cookie = setCookie.split(';')[0];
-    expect(cookie).toBeTruthy();
+    const { cookie } = await login(base1);
 
     // 3. Confirm session works on app1
     const check1 = await fetch(`${base1}/api/v1/health`, { headers: { Cookie: cookie } });
@@ -111,6 +135,57 @@ describe('session persistence', () => {
     expect(unauthed.status).toBe(401);
 
     await app2.close();
+  });
+
+  test('password change invalidates all active sessions', async () => {
+    await writeConfig();
+
+    const store = new FileSessionStore(sessionsFile);
+    await store.init();
+    const app = await buildTestApp(store);
+    const addr = app.addresses()[0];
+    const base = `http://${addr.address}:${addr.port}`;
+
+    try {
+      const sessionA = await login(base);
+      const sessionB = await login(base);
+
+      const changeRes = await fetch(`${base}/api/v1/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: sessionA.cookie,
+          'x-csrf-token': sessionA.csrfToken,
+        },
+        body: JSON.stringify({
+          currentPassword: PASSWORD,
+          newPassword: 'newpassword123',
+        }),
+      });
+      expect(changeRes.ok).toBe(true);
+
+      const checkA = await fetch(`${base}/api/v1/auth/check`, {
+        headers: { Cookie: sessionA.cookie },
+      });
+      expect(checkA.status).toBe(401);
+
+      const checkB = await fetch(`${base}/api/v1/auth/check`, {
+        headers: { Cookie: sessionB.cookie },
+      });
+      expect(checkB.status).toBe(401);
+
+      const oldLogin = await fetch(`${base}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: PASSWORD }),
+      });
+      expect(oldLogin.status).toBe(401);
+
+      await login(base, 'newpassword123');
+    } finally {
+      await app.close();
+      await writeConfig();
+    }
   });
 
   test('expired sessions are not restored', async () => {

@@ -103,7 +103,9 @@ async function start() {
   });
 
   // Auth routes and middleware
-  await registerAuth(app, resolvedNotesDir);
+  await registerAuth(app, resolvedNotesDir, {
+    invalidateAllSessions: () => sessionStore.destroyAll(),
+  });
 
   // Notes API
   await registerNotes(app, resolvedNotesDir);

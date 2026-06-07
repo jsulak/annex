@@ -23,12 +23,18 @@ export async function registerAssets(app: FastifyInstance, notesDir: string) {
     }
 
     // Decode URL-encoded characters (e.g. %20 → space) so filenames with spaces resolve correctly
-    const decodedPath = decodeURIComponent(rawPath);
+    let decodedPath: string;
+    try {
+      decodedPath = decodeURIComponent(rawPath);
+    } catch {
+      return reply.status(400).send({ error: 'Invalid path' });
+    }
 
-    // Resolve and validate path stays within notesDir (path traversal prevention)
+    // Resolve and validate path stays within NOTES_DIR/media only.
     const resolved = path.resolve(notesDir, decodedPath);
-    const safePrefix = notesDir.endsWith(path.sep) ? notesDir : notesDir + path.sep;
-    if (!resolved.startsWith(safePrefix)) {
+    const mediaDir = path.resolve(notesDir, 'media');
+    const mediaPrefix = mediaDir.endsWith(path.sep) ? mediaDir : mediaDir + path.sep;
+    if (!resolved.startsWith(mediaPrefix)) {
       return reply.status(403).send({ error: 'Forbidden' });
     }
 

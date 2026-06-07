@@ -22,6 +22,10 @@ beforeAll(async () => {
   fs.writeFileSync(path.join(mediaDir, 'test.png'), pngBytes);
   fs.writeFileSync(path.join(mediaDir, 'evil.svg'), '<svg><script>alert(1)</script></svg>');
   fs.writeFileSync(path.join(ctx.notesDir, 'plain.txt'), 'hello text');
+  fs.mkdirSync(path.join(ctx.notesDir, '_trash'), { recursive: true });
+  fs.writeFileSync(path.join(ctx.notesDir, '_trash', 'deleted.md'), 'deleted note');
+  fs.mkdirSync(path.join(ctx.notesDir, '_backups'), { recursive: true });
+  fs.writeFileSync(path.join(ctx.notesDir, '_backups', 'backup.tar.gz'), 'backup');
 });
 
 afterAll(async () => {
@@ -35,11 +39,9 @@ describe('GET /api/v1/assets/*', () => {
     expect(res.headers.get('content-type')).toContain('image/png');
   });
 
-  test('serves a file from the notes root', async () => {
+  test('rejects files from the notes root', async () => {
     const res = await http.get('/api/v1/assets/plain.txt');
-    expect(res.ok).toBe(true);
-    const text = await res.text();
-    expect(text).toBe('hello text');
+    expect(res.status).toBe(403);
   });
 
   test('returns 404 for nonexistent asset', async () => {
@@ -50,6 +52,20 @@ describe('GET /api/v1/assets/*', () => {
   test('rejects SVG assets', async () => {
     const res = await http.get('/api/v1/assets/media/evil.svg');
     expect(res.status).toBe(403);
+  });
+
+  test('rejects internal config, trash, and backup files', async () => {
+    const paths = [
+      '/api/v1/assets/_annex.json',
+      '/api/v1/assets/_trash/deleted.md',
+      '/api/v1/assets/_backups/backup.tar.gz',
+      '/api/v1/assets/media/../_annex.json',
+    ];
+
+    for (const p of paths) {
+      const res = await http.get(p);
+      expect(res.status, p).toBe(403);
+    }
   });
 
   test('rejects path traversal attempts', async () => {

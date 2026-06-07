@@ -23,6 +23,8 @@ export interface AuthOptions {
   rateLimitMax?: number;
   /** Artificial delay (ms) on wrong password. Default: 1000. */
   loginDelayMs?: number;
+  /** Optional hook to invalidate every active session after a password change. */
+  invalidateAllSessions?: () => Promise<void>;
 }
 
 export async function registerAuth(app: FastifyInstance, _notesDir: string, opts: AuthOptions = {}) {
@@ -161,8 +163,15 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
     config.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await writeConfig(config);
 
-    // Destroy current session (user must re-login)
-    void request.session.destroy();
+    if (opts.invalidateAllSessions) {
+      await opts.invalidateAllSessions();
+    }
+    await new Promise<void>((resolve, reject) => {
+      request.session.destroy((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
     return { ok: true };
   });
 

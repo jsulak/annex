@@ -73,6 +73,11 @@ export class FileSessionStore {
     this.persist().then(() => callback(null), (err: unknown) => callback(err instanceof Error ? err : new Error(String(err))));
   }
 
+  async destroyAll(): Promise<void> {
+    this.sessions.clear();
+    await this.persist();
+  }
+
   private isExpired(session: StoredSession, now: number): boolean {
     const expires = session?.cookie?.expires;
     if (!expires) return false;
