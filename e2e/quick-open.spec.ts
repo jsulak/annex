@@ -45,6 +45,7 @@ test.describe('Quick Open dialog', () => {
     const input = page.getByPlaceholder('Quick open... type to filter');
 
     await input.fill('Second');
+    await expect(input.locator('..').locator('..').getByText('Second Note')).toBeVisible({ timeout: 5_000 });
     await page.keyboard.press('Enter');
 
     // Dialog should close and editor should show the note

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import path from 'node:path';
+import { filenameToId } from './noteParser.js';
 
 /** Resolve a filename within notesDir and assert it stays inside. */
 export function safePath(notesDir: string, filename: string): string {
@@ -71,13 +72,14 @@ export async function writeMediaFile(notesDir: string, filename: string, data: B
   return 'media/' + filename;
 }
 
-/** Find the file in notesDir matching the given ID (numeric prefix or full filename stem). */
+/** Find the file in notesDir matching the given ID (timestamp ID or full filename stem). */
 export async function findFileById(notesDir: string, id: string): Promise<string | null> {
   if (!id) return null;
   const files = await listNoteFiles(notesDir);
-  // Numeric IDs match by prefix; non-numeric IDs match exact filename stem
+  // Numeric timestamp IDs must match exactly after parsing the filename prefix.
+  // A raw startsWith match lets YYYYMMDDHHMM collide with YYYYMMDDHHMMSS.
   if (/^\d{12,14}$/.test(id)) {
-    return files.find((f) => f.startsWith(id)) ?? null;
+    return files.find((f) => filenameToId(f) === id) ?? null;
   }
   const stem = id.replace(/\.md$/i, '');
   return files.find((f) => f.replace(/\.md$/i, '') === stem) ?? null;

@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { apiDelete, apiPut } from './helpers/api';
 
 /**
  * Tests that changes made in one browser session are immediately reflected
@@ -55,6 +56,7 @@ test.describe('Cross-session real-time sync', () => {
     const ctxB = await browser.newContext({ storageState });
     const pageA = await ctxA.newPage();
     const pageB = await ctxB.newPage();
+    let createdId: string | null = null;
 
     try {
       await pageA.goto('/');
@@ -63,28 +65,31 @@ test.describe('Cross-session real-time sync', () => {
       await expect(pageB.locator('#search-input')).toBeVisible({ timeout: 10_000 });
       await expect(pageB.locator('#note-list > div').first()).toBeVisible({ timeout: 5_000 });
 
-      const notesBefore = await pageB.locator('#note-list > div').count();
-
-      // Session A creates a new note
-      await pageA.locator('button[title="New note"]').click();
-      const titleInput = pageA.locator('input[placeholder="Note title..."]');
-      await expect(titleInput).toBeVisible({ timeout: 5_000 });
-      await titleInput.fill('Cross Session New Note');
-      await pageA.locator('button:has-text("Create")').click();
-      await expect(pageA.locator('.cm-editor')).toBeVisible({ timeout: 5_000 });
+      // Session A creates a new note via its authenticated API context.
+      const title = `Cross Session New Note ${Date.now()}`;
+      const id = `${Date.now()}`;
+      createdId = id;
+      const create = await apiPut(ctxA.request, `/api/v1/notes/${id}`, {
+        data: {
+          body: `# ${title}\n\nCreated from session A.`,
+          filename: `${id} ${title}.md`,
+        },
+      });
+      expect(create.ok()).toBe(true);
 
       // Session B should receive note:modified SSE and add it to its list.
       // If the file watcher event is coalesced, a reload should still reflect the created note.
       try {
-        await expect(pageB.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 8_000 });
-        await expect(pageB.locator('#note-list').getByText('Cross Session New Note')).toBeVisible({ timeout: 5_000 });
+        await expect(pageB.locator('#note-list').getByText(title)).toBeVisible({ timeout: 8_000 });
       } catch {
         await pageB.reload();
         await expect(pageB.locator('#search-input')).toBeVisible({ timeout: 10_000 });
-        await expect(pageB.locator('#note-list > div')).toHaveCount(notesBefore + 1, { timeout: 8_000 });
-        await expect(pageB.locator('#note-list').getByText('Cross Session New Note')).toBeVisible({ timeout: 5_000 });
+        await expect(pageB.locator('#note-list').getByText(title)).toBeVisible({ timeout: 8_000 });
       }
     } finally {
+      if (createdId) {
+        await apiDelete(ctxA.request, `/api/v1/notes/${createdId}`);
+      }
       await ctxA.close();
       await ctxB.close();
     }

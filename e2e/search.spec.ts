@@ -109,9 +109,11 @@ test.describe('Search — clearing and navigation', () => {
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
     await page.locator('#search-input').fill('xylophoneUnicorn42');
-    await expect(page.locator('#note-list').getByText('202401151433 Second Note')).toBeVisible({ timeout: 5_000 });
+    const result = page.locator('#note-list > div').filter({ hasText: '202401151433 Second Note' });
+    await expect(result).toBeVisible({ timeout: 5_000 });
 
-    await page.locator('#note-list').getByText('202401151433 Second Note').click();
+    await result.click();
+    await expect(page).toHaveURL(/\/note\/202401151433/, { timeout: 5_000 });
 
     const editor = page.locator('.cm-content');
     await expect(editor).toBeVisible({ timeout: 5_000 });

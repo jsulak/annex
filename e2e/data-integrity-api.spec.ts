@@ -25,8 +25,7 @@ test.describe('findFileById prefix collision', () => {
     });
     expect(res2.ok()).toBe(true);
 
-    // GET by short ID — findFileById uses startsWith, so this may
-    // incorrectly match the long ID file if it appears first in readdir
+    // GET by short ID should return the exact short-ID note, not the long ID file.
     const get1 = await request.get(`/api/v1/notes/${shortId}`);
     expect(get1.ok()).toBe(true);
     const note1 = await get1.json();
@@ -40,6 +39,26 @@ test.describe('findFileById prefix collision', () => {
     expect(note2.body).toBe('# Long ID Note');
 
     await request.delete(`/api/v1/notes/${shortId}`);
+    await request.delete(`/api/v1/notes/${longId}`);
+  });
+
+  test('12-digit prefix does not resolve a 14-digit note when exact 12-digit note is absent', async ({ request }) => {
+    const shortId = nextId();
+    const longId = `${shortId}30`;
+
+    const create = await request.put(`/api/v1/notes/${longId}`, {
+      data: { body: '# Long ID Only' },
+    });
+    expect(create.ok()).toBe(true);
+
+    const getShort = await request.get(`/api/v1/notes/${shortId}`);
+    expect(getShort.status()).toBe(404);
+
+    const getLong = await request.get(`/api/v1/notes/${longId}`);
+    expect(getLong.ok()).toBe(true);
+    const note = await getLong.json();
+    expect(note.body).toBe('# Long ID Only');
+
     await request.delete(`/api/v1/notes/${longId}`);
   });
 });
