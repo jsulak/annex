@@ -14,8 +14,6 @@ Heavily inspired by [The Archive](https://zettelkasten.de/the-archive/) and desi
 
 This is the software that I want to use; it is probably not the software that you want to use. 
 
-I created this as an experiment — could I create, with Claude Code, a customized version of a piece of software that I use heavily? This is the result, and I can safely say that I would have been unable to do so on any reasonable schedule, and likely not to this level of quality.
-
 ## Features
 
 - **Plain text notes** — `.md` files with `YYYYMMDDHHMM Title.md` naming convention, fully compatible with The Archive
