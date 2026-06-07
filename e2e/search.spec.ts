@@ -2,6 +2,14 @@ import { test, expect } from './fixtures';
 
 test.describe.configure({ mode: 'serial' });
 
+let idCounter = 0;
+function nextId(): string {
+  idCounter++;
+  const hh = String(Math.floor(idCounter / 60)).padStart(2, '0');
+  const mm = String(idCounter % 60).padStart(2, '0');
+  return `20990201${hh}${mm}`;
+}
+
 test.describe('Search — filtering and results', () => {
   test('search by unique body text shows matching note only', async ({ page }) => {
     await page.goto('/');
@@ -49,11 +57,10 @@ test.describe('Search — filtering and results', () => {
     await expect(page.getByText('No results found.')).toBeVisible({ timeout: 5_000 });
   });
 
-  test('search by #tag finds notes containing that word', async ({ page }) => {
+  test('search by #tag finds notes with that tag', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
 
-    // #test appears in Sample Note and Third Note body text
     await page.locator('#search-input').fill('#test');
 
     await expect(page.locator('#note-list').getByText('202401151432 Sample Note')).toBeVisible({ timeout: 5_000 });
@@ -207,7 +214,7 @@ test.describe('Search — keyboard shortcuts', () => {
   });
 });
 
-test.describe('Search — hashtag as text search', () => {
+test.describe('Search — hashtag as tag search', () => {
   test('searching #test finds notes with that tag', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
@@ -227,6 +234,28 @@ test.describe('Search — hashtag as text search', () => {
 
     // Third Note has #second-tag and should appear in results
     await expect(page.locator('#note-list').getByText('202401151434 Third Note')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('searching #architecture excludes plain architecture mentions', async ({ page, request }) => {
+    const taggedId = nextId();
+    const plainId = nextId();
+
+    await request.put(`/api/v1/notes/${taggedId}`, {
+      data: { body: '# Tagged Architecture\n\n#architecture systems note.' },
+    });
+    await request.put(`/api/v1/notes/${plainId}`, {
+      data: { body: '# Plain Architecture\n\nThis mentions architecture without a tag.' },
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#search-input').fill('#architecture');
+
+    await expect(page.locator('#note-list').getByText(`${taggedId} Untitled`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText(`${plainId} Untitled`)).not.toBeVisible();
+
+    await request.delete(`/api/v1/notes/${taggedId}`);
+    await request.delete(`/api/v1/notes/${plainId}`);
   });
 });
 

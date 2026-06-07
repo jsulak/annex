@@ -22,16 +22,16 @@ describe('parseQuery', () => {
     expect(q.phrases).toEqual(['first phrase', 'second phrase']);
   });
 
-  test('#tags become plain search terms', () => {
+  test('#tags become tag filters', () => {
     const q = parseQuery('#javascript #react');
-    expect(q.tags).toEqual([]);
-    expect(q.terms).toEqual(['javascript', 'react']);
+    expect(q.tags).toEqual(['javascript', 'react']);
+    expect(q.terms).toEqual([]);
   });
 
-  test('#tags are lowercased as search terms', () => {
+  test('#tags are lowercased as tag filters', () => {
     const q = parseQuery('#JavaScript');
-    expect(q.terms).toEqual(['javascript']);
-    expect(q.tags).toEqual([]);
+    expect(q.tags).toEqual(['javascript']);
+    expect(q.terms).toEqual([]);
   });
 
   test('parses NOT negations', () => {
@@ -42,8 +42,8 @@ describe('parseQuery', () => {
 
   test('parses complex query with all parts', () => {
     const q = parseQuery('hello #tag "exact match" NOT bad');
-    expect(q.terms).toEqual(['hello', 'tag']);
-    expect(q.tags).toEqual([]);
+    expect(q.terms).toEqual(['hello']);
+    expect(q.tags).toEqual(['tag']);
     expect(q.phrases).toEqual(['exact match']);
     expect(q.negations).toEqual(['bad']);
   });
@@ -62,10 +62,10 @@ describe('parseQuery', () => {
     expect(q.negations).toEqual(['bad', 'ugly']);
   });
 
-  test('#tag with hyphens and underscores become search terms', () => {
+  test('#tag with hyphens and underscores become tag filters', () => {
     const q = parseQuery('#my-tag #my_tag');
-    expect(q.terms).toEqual(['my-tag', 'my_tag']);
-    expect(q.tags).toEqual([]);
+    expect(q.tags).toEqual(['my-tag', 'my_tag']);
+    expect(q.terms).toEqual([]);
   });
 
   test('whitespace-only query produces empty result', () => {
@@ -98,9 +98,9 @@ describe('parseQuery', () => {
 
   test('phrase combined with #tag and term', () => {
     const q = parseQuery('#urgent "by tomorrow" meeting');
-    expect(q.tags).toEqual([]);
+    expect(q.tags).toEqual(['urgent']);
     expect(q.phrases).toEqual(['by tomorrow']);
-    expect(q.terms).toEqual(['urgent', 'meeting']);
+    expect(q.terms).toEqual(['meeting']);
   });
 });
 
@@ -145,7 +145,7 @@ describe('search behavior', () => {
     await http.delete(`/api/v1/notes/${id2}`);
   });
 
-  test('#tag search finds notes by text content', async () => {
+  test('#tag search finds notes by tag only', async () => {
     const id1 = nextId();
     const id2 = nextId();
     const id3 = nextId();
@@ -154,10 +154,8 @@ describe('search behavior', () => {
     await http.put(`/api/v1/notes/${id3}`, { body: '# Unrelated\n\nNo match here at all.' });
 
     const results = await (await http.get('/api/v1/search?q=%23uniqueSearchTag99')).json();
-    // Both notes with the word should match (tag search is now text-based)
     expect(results.some((r: { id: string }) => r.id === id1)).toBe(true);
-    expect(results.some((r: { id: string }) => r.id === id2)).toBe(true);
-    // Unrelated note should not match
+    expect(results.some((r: { id: string }) => r.id === id2)).toBe(false);
     expect(results.some((r: { id: string }) => r.id === id3)).toBe(false);
 
     await http.delete(`/api/v1/notes/${id1}`);
@@ -216,7 +214,7 @@ describe('search behavior', () => {
   });
 });
 
-describe('search — hashtag as text search', () => {
+describe('search — hashtag as tag search', () => {
   test('#tag search finds notes containing that tag in body text', async () => {
     const id = nextId();
     await http.put(`/api/v1/notes/${id}`, { body: '# Devops Note\n\nThis note is about #devopsUniq99 practices.' });
@@ -227,7 +225,7 @@ describe('search — hashtag as text search', () => {
     await http.delete(`/api/v1/notes/${id}`);
   });
 
-  test('#tag search does not match notes without the tag', async () => {
+  test('#tag search does not match notes that mention the word without the tag marker', async () => {
     const id1 = nextId();
     const id2 = nextId();
     await http.put(`/api/v1/notes/${id1}`, { body: '# Tagged\n\nHas #zTestOnlyTag77 here.' });
@@ -235,8 +233,7 @@ describe('search — hashtag as text search', () => {
 
     const results = await (await http.get('/api/v1/search?q=%23zTestOnlyTag77')).json();
     expect(results.some((r: { id: string }) => r.id === id1)).toBe(true);
-    // id2 has the word but not the #tag — should still match since we treat as text
-    expect(results.some((r: { id: string }) => r.id === id2)).toBe(true);
+    expect(results.some((r: { id: string }) => r.id === id2)).toBe(false);
 
     await http.delete(`/api/v1/notes/${id1}`);
     await http.delete(`/api/v1/notes/${id2}`);

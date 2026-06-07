@@ -80,9 +80,11 @@ export function parseQuery(raw: string): ParsedQuery {
     return ' ';
   });
 
-  // #tags are treated as plain text search terms (strip the # for indexing)
+  // Extract #tags as structured filters. They are matched against parsed note tags,
+  // not full-text body content.
   q = q.replace(/#([a-zA-Z][\w-]*)/g, (_match, tag: string) => {
-    return ` ${tag.toLowerCase()} `;
+    tags.push(tag.toLowerCase());
+    return ' ';
   });
 
   // Remaining words are plain terms
