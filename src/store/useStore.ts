@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '../api/client.js';
-import type { NoteIndex, NoteDetail, SearchResult } from '../types.js';
+import type { NoteIndex, NoteDetail, SearchResult, ReferenceEntry } from '../types.js';
 
 function generateId(): string {
   return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 12);
@@ -72,7 +72,15 @@ interface AppState {
   selectNote: (id: string) => Promise<void>;
   deselectNote: () => void;
   updateEtag: (etag: string) => void;
-  updateNoteInList: (id: string, modifiedAt: string, title: string, snippet: string, tags: string[], links: string[]) => void;
+  updateNoteInList: (
+    id: string,
+    modifiedAt: string,
+    title: string,
+    snippet: string,
+    tags: string[],
+    links: string[],
+    references: ReferenceEntry[],
+  ) => void;
   renameNoteInList: (id: string, filename: string, title: string) => void;
   createNote: (title?: string) => Promise<void>;
   deleteNote: (id: string) => Promise<boolean>;
@@ -218,12 +226,12 @@ export const useStore = create<AppState>((set, get) => ({
       selectedNote: s.selectedNote ? { ...s.selectedNote, etag } : null,
     })),
 
-  updateNoteInList: (id, modifiedAt, title, snippet, tags, links) =>
+  updateNoteInList: (id, modifiedAt, title, snippet, tags, links, references) =>
     set((s) => {
       const idx = s.notes.findIndex((n) => n.id === id);
       if (idx < 0) return s;
       const notes = [...s.notes];
-      notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links };
+      notes[idx] = { ...notes[idx], modifiedAt, title, snippet, tags, links, references };
       // Re-sort by last modified so edited note moves to top
       notes.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
       return { notes };

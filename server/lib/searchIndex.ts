@@ -243,6 +243,7 @@ export function search(rawQuery: string, limit = 50): SearchResultItem[] {
       snippet,
       tags: note.tags,
       links: note.links,
+      references: note.references,
       createdAt: note.createdAt,
       modifiedAt: note.modifiedAt,
       titleMatches,

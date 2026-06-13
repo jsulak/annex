@@ -71,7 +71,15 @@ export function useAutoSave(
       if (res.ok) {
         const data = await res.json();
         useStore.getState().updateEtag(data.etag);
-        useStore.getState().updateNoteInList(id, data.modifiedAt, data.title, data.snippet, data.tags, data.links);
+        useStore.getState().updateNoteInList(
+          id,
+          data.modifiedAt,
+          data.title,
+          data.snippet,
+          data.tags,
+          data.links,
+          data.references,
+        );
         useStore.getState().setHasPendingEdits(false);
         pendingContentRef.current = null;
         setSaveStatus('saved');

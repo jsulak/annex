@@ -77,6 +77,56 @@ describe('metadata extraction', () => {
     await http.delete(`/api/v1/notes/${id}`);
   });
 
+  test('references are returned with note metadata', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: [
+        '# References Test',
+        '',
+        'See [54][#drucker1967].',
+        '',
+        '[#drucker1967]: Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+      ].join('\n'),
+    });
+
+    const note = await (await http.get(`/api/v1/notes/${id}`)).json();
+    expect(note.references).toEqual([
+      {
+        key: 'drucker1967',
+        text: 'Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+        raw: '[#drucker1967]: Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+      },
+    ]);
+    expect(note.tags).not.toContain('drucker1967');
+
+    const notes = await (await http.get('/api/v1/notes')).json();
+    const indexed = notes.find((n: { id: string }) => n.id === id);
+    expect(indexed.references).toEqual(note.references);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('updated references are returned after save', async () => {
+    const id = nextId();
+    const created = await http.put(`/api/v1/notes/${id}`, {
+      body: '# References Test\n\n[#drucker1967]: First value.',
+    });
+    const createdNote = await created.json();
+
+    const updated = await http.put(
+      `/api/v1/notes/${id}`,
+      { body: '# References Test\n\n[#drucker1967]: Updated value.' },
+      { 'If-Match': createdNote.etag },
+    );
+    const updatedNote = await updated.json();
+
+    expect(updatedNote.references).toEqual([
+      { key: 'drucker1967', text: 'Updated value.', raw: '[#drucker1967]: Updated value.' },
+    ]);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
   test('heading markers not confused with tags', async () => {
     const id = nextId();
     await http.put(`/api/v1/notes/${id}`, {

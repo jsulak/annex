@@ -5,8 +5,15 @@ export interface NoteIndex {
   snippet: string;
   tags: string[];
   links: string[];
+  references: ReferenceEntry[];
   createdAt: string;
   modifiedAt: string;
+}
+
+export interface ReferenceEntry {
+  key: string;
+  text: string;
+  raw: string;
 }
 
 export interface NoteDetail extends NoteIndex {

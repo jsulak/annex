@@ -6,6 +6,7 @@ import {
   extractSnippet,
   extractTags,
   extractLinks,
+  extractReferences,
   parseNote,
 } from '../server/lib/noteParser.js';
 
@@ -190,6 +191,11 @@ describe('extractTags', () => {
     const tags = extractTags('code#notag');
     expect(tags).not.toContain('notag');
   });
+
+  test('reference keys are not tags', () => {
+    const tags = extractTags('[#drucker1967]: Peter Drucker (1967): _The Effective Executive_.');
+    expect(tags).not.toContain('drucker1967');
+  });
 });
 
 describe('extractLinks', () => {
@@ -230,11 +236,39 @@ describe('extractLinks', () => {
   });
 });
 
+describe('extractReferences', () => {
+  test('extracts reference definition lines', () => {
+    const refs = extractReferences(
+      '[#drucker1967]: Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+    );
+    expect(refs).toEqual([
+      {
+        key: 'drucker1967',
+        text: 'Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+        raw: '[#drucker1967]: Peter Drucker (1967): _The Effective Executive_, Harper Business.',
+      },
+    ]);
+  });
+
+  test('extracts multiple references and deduplicates keys case-insensitively', () => {
+    const refs = extractReferences([
+      '[#Drucker1967]: First value.',
+      '[#simon-1947]: Herbert Simon (1947): _Administrative Behavior_.',
+      '[#drucker1967]: Duplicate value.',
+    ].join('\n'));
+    expect(refs.map((ref) => ref.key)).toEqual(['Drucker1967', 'simon-1947']);
+  });
+
+  test('returns empty when there are no reference definitions', () => {
+    expect(extractReferences('See [54][#drucker1967].')).toEqual([]);
+  });
+});
+
 describe('parseNote', () => {
   test('produces complete NoteIndex', () => {
     const note = parseNote(
       '202401151432 Test.md',
-      '# Test Note\n\nBody with #tag and [[link]].',
+      '# Test Note\n\nBody with #tag and [[link]].\n\n[#drucker1967]: Peter Drucker.',
       new Date('2024-06-01T10:00:00Z'),
     );
     expect(note.id).toBe('202401151432');
@@ -242,9 +276,12 @@ describe('parseNote', () => {
     expect(note.title).toBe('Test Note');
     expect(note.tags).toContain('tag');
     expect(note.links).toContain('link');
+    expect(note.references).toEqual([
+      { key: 'drucker1967', text: 'Peter Drucker.', raw: '[#drucker1967]: Peter Drucker.' },
+    ]);
     expect(note.createdAt).toContain('2024-01-15');
     expect(note.modifiedAt).toBe('2024-06-01T10:00:00.000Z');
-    expect(note.snippet).toBe('Body with #tag and [[link]].');
+    expect(note.snippet).toBe('Body with #tag and [[link]].\n\n[#drucker1967]: Peter Drucker.');
   });
 
   test('uses mtime for createdAt when no numeric ID', () => {

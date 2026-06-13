@@ -159,6 +159,7 @@ Example: `202401151432 On the nature of ideas.md`
 - No YAML front-matter required. If present it is displayed as a fenced code block and not parsed specially.
 - **Tags** are written as `#hashtag` inline in the note body. Multi-word tags use `#CamelCase` or `#kebab-case`.
 - **Internal links** use `[[Note ID]]` or `[[Note Title]]` wiki-link syntax.
+- **References** use Markdown reference definitions with `#` keys, e.g. `[#drucker1967]: Peter Drucker (1967): _The Effective Executive_, Harper Business.` Page citations use `[54][#drucker1967]`.
 
 ### 7.3 Encoding
 
@@ -227,7 +228,7 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/notes` | List all notes (id, filename, title, snippet, tags, modifiedAt) |
+| `GET` | `/notes` | List all notes (id, filename, title, snippet, tags, references, modifiedAt) |
 | `GET` | `/notes/:id` | Get full note content + etag |
 | `PUT` | `/notes/:id` | Save note; accepts optional `If-Match: <etag>` header |
 | `DELETE` | `/notes/:id` | Move note to `_trash/` subdirectory |
@@ -354,7 +355,7 @@ Sort by last modified (default), created, or title. Keyboard navigation with `�
 Omnibar always visible. `Cmd/Ctrl+L` or `/` to focus. 150ms debounce. Match highlighting in list and editor. Saved searches (`Cmd/Ctrl+Shift+S`) persisted via config API.
 
 ### 13.3 Note Editor
-CodeMirror 6 with Markdown mode. `[[` autocomplete for note links — selecting a note from the dropdown inserts its numeric ID (e.g. `[[202601280000]]`), which is stable across title renames. `#` autocomplete for tags. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable). Typewriter mode (`Cmd/Ctrl+Shift+T`).
+CodeMirror 6 with Markdown mode. `[[` autocomplete for note links — selecting a note from the dropdown inserts its numeric ID (e.g. `[[202601280000]]`), which is stable across title renames. `#` autocomplete for tags. `[#key]` reference autocomplete inserts full reference definitions, and `[page][#key]` citation autocomplete inserts page citations while adding a missing bottom reference definition once. Auto-pairs. Unsaved indicator (`•`). Auto-save (debounced, configurable). Typewriter mode (`Cmd/Ctrl+Shift+T`).
 
 ### 13.4 Preview Mode
 Toggle Edit / Preview / Split with `Cmd/Ctrl+P`. Renders CommonMark + GFM. Images served via `/assets/:filename`. Wiki-links and `#tags` are clickable. External URLs open in new tab.

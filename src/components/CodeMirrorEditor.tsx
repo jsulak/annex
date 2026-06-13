@@ -90,6 +90,7 @@ export default function CodeMirrorEditor({
   const stableProviders: CompletionProviders = useMemo(() => ({
     getNotes: () => completionProvidersRef.current?.getNotes() ?? [],
     getTags: () => completionProvidersRef.current?.getTags() ?? [],
+    getReferences: () => completionProvidersRef.current?.getReferences() ?? [],
   }), []);
 
   const stableOnUploadStatus = useCallback((status: UploadStatus, message?: string) => {

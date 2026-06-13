@@ -206,6 +206,20 @@ export default function EditorPane() {
         }
         return [...tagSet].sort();
       },
+      getReferences: () => {
+        const state = useStore.getState();
+        const refs = new Map<string, { key: string; text: string; raw: string }>();
+        for (const ref of state.selectedNote?.references ?? []) {
+          refs.set(ref.key.toLowerCase(), ref);
+        }
+        for (const note of state.notes) {
+          for (const ref of note.references) {
+            const key = ref.key.toLowerCase();
+            if (!refs.has(key)) refs.set(key, ref);
+          }
+        }
+        return [...refs.values()].sort((a, b) => a.key.localeCompare(b.key));
+      },
     }),
     [],
   );

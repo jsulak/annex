@@ -123,6 +123,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Case-insensitive search fix (Flexsearch limit increased for common-word queries)
 - [x] Tag search filters by parsed note tags rather than matching untagged body text
 - [x] Asset serving (GET /assets/:filename)
+- [x] Reference/bibliography autocomplete (reference definitions + page citations)
 - [x] Add linting / code analysis
 - [x] Lightweight service monitoring
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)

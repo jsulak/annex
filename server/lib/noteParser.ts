@@ -5,6 +5,7 @@ export interface NoteIndex {
   snippet: string;
   tags: string[];
   links: string[];
+  references: ReferenceEntry[];
   createdAt: string;
   modifiedAt: string;
 }
@@ -12,6 +13,12 @@ export interface NoteIndex {
 export interface NoteDetail extends NoteIndex {
   body: string;
   etag: string;
+}
+
+export interface ReferenceEntry {
+  key: string;
+  text: string;
+  raw: string;
 }
 
 /** Extract note ID from filename: leading 12-14 digits if present, otherwise filename without .md. */
@@ -85,6 +92,26 @@ export function extractLinks(body: string): string[] {
   return [...links];
 }
 
+/** All reference definition lines like `[#key]: Reference text`. */
+export function extractReferences(body: string): ReferenceEntry[] {
+  const references = new Map<string, ReferenceEntry>();
+  const re = /^\s*\[#([^\]\s]+)\]:\s*(.+?)\s*$/gm;
+  let match;
+  while ((match = re.exec(body)) !== null) {
+    const key = match[1].trim();
+    const text = match[2].trim();
+    const lookupKey = key.toLowerCase();
+    if (!references.has(lookupKey)) {
+      references.set(lookupKey, {
+        key,
+        text,
+        raw: `[#${key}]: ${text}`,
+      });
+    }
+  }
+  return [...references.values()];
+}
+
 /** Parse a note file into a NoteIndex object. */
 export function parseNote(filename: string, body: string, mtime: Date): NoteIndex {
   const id = filenameToId(filename);
@@ -96,6 +123,7 @@ export function parseNote(filename: string, body: string, mtime: Date): NoteInde
     snippet: extractSnippet(body),
     tags: extractTags(body),
     links: extractLinks(body),
+    references: extractReferences(body),
     createdAt: createdFromId || mtime.toISOString(),
     modifiedAt: mtime.toISOString(),
   };
