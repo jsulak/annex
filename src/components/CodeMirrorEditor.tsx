@@ -6,12 +6,14 @@ import {
   editorDisplayExtensions,
   editorDisplaySettingsCompartment,
   setSearchTermsEffect,
+  setSearchRangesEffect,
   type EditorCallbacks,
   type UploadStatus,
 } from '../editor/setup.js';
 import { saveKeymap } from '../editor/keymaps.js';
 import type { CompletionProviders } from '../editor/autocomplete.js';
 import { parseSearchTerms } from '../utils/searchTerms.js';
+import type { SemanticHighlight } from '../types.js';
 
 interface Props {
   doc: string;
@@ -24,6 +26,7 @@ interface Props {
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
   focusRequest?: number;
   searchQuery?: string;
+  semanticHighlight?: SemanticHighlight | null;
   hideMarkdownMarkup?: boolean;
 }
 
@@ -38,6 +41,7 @@ export default function CodeMirrorEditor({
   insertRef,
   focusRequest,
   searchQuery,
+  semanticHighlight,
   hideMarkdownMarkup = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,6 +49,8 @@ export default function CodeMirrorEditor({
   const isSettingDocRef = useRef(false);
   const searchQueryRef = useRef(searchQuery);
   searchQueryRef.current = searchQuery;
+  const semanticHighlightRef = useRef(semanticHighlight);
+  semanticHighlightRef.current = semanticHighlight;
   const onUpdateRef = useRef(onUpdate);
   onUpdateRef.current = onUpdate;
 
@@ -130,11 +136,7 @@ export default function CodeMirrorEditor({
 
     viewRef.current = view;
 
-    // Apply any active search highlights on mount
-    const initialTerms = parseSearchTerms(searchQueryRef.current ?? '');
-    if (initialTerms.length > 0) {
-      view.dispatch({ effects: setSearchTermsEffect.of(initialTerms) });
-    }
+    applySearchOrSemanticHighlight(view, searchQueryRef.current, semanticHighlightRef.current, true);
 
     if (insertRef) {
       insertRef.current = (text: string) => {
@@ -167,9 +169,8 @@ export default function CodeMirrorEditor({
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
-    const terms = parseSearchTerms(searchQuery ?? '');
-    view.dispatch({ effects: setSearchTermsEffect.of(terms) });
-  }, [searchQuery]);
+    applySearchOrSemanticHighlight(view, searchQuery, semanticHighlight, true);
+  }, [searchQuery, semanticHighlight]);
 
   // Focus the editor when focusRequest increments (also fires on mount if already > 0)
   useEffect(() => {
@@ -200,11 +201,7 @@ export default function CodeMirrorEditor({
 
     isSettingDocRef.current = false;
 
-    // Re-apply search highlights after state replacement
-    const terms = parseSearchTerms(searchQueryRef.current ?? '');
-    if (terms.length > 0) {
-      view.dispatch({ effects: setSearchTermsEffect.of(terms) });
-    }
+    applySearchOrSemanticHighlight(view, searchQueryRef.current, semanticHighlightRef.current, true);
   }, [doc, buildCallbacks, buildDisplayOptions, stableSaveNow]);
 
   return (
@@ -217,4 +214,28 @@ export default function CodeMirrorEditor({
       }}
     />
   );
+}
+
+function applySearchOrSemanticHighlight(
+  view: EditorView,
+  searchQuery: string | undefined,
+  semanticHighlight: SemanticHighlight | null | undefined,
+  scrollToSemantic: boolean,
+) {
+  if (semanticHighlight) {
+    const from = Math.max(0, Math.min(view.state.doc.length, semanticHighlight.from));
+    const to = Math.max(from, Math.min(view.state.doc.length, semanticHighlight.to));
+    view.dispatch({
+      effects: setSearchRangesEffect.of(to > from ? [{ from, to }] : []),
+    });
+    if (scrollToSemantic && to > from) {
+      view.dispatch({
+        effects: EditorView.scrollIntoView(Math.floor((from + to) / 2), { y: 'center' }),
+      });
+    }
+    return;
+  }
+
+  const terms = parseSearchTerms(searchQuery ?? '');
+  view.dispatch({ effects: setSearchTermsEffect.of(terms) });
 }

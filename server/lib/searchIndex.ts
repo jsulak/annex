@@ -9,6 +9,8 @@ export interface SearchResultItem extends NoteIndex {
   matchType?: 'exact' | 'hybrid' | 'semantic';
   semanticScore?: number;
   semanticSnippet?: string;
+  semanticStartOffset?: number;
+  semanticEndOffset?: number;
 }
 
 export interface StoredNote extends NoteIndex {
@@ -350,6 +352,8 @@ export async function search(rawQuery: string, limit = 50): Promise<SearchResult
         matchType: 'semantic',
         semanticScore: result.score,
         semanticSnippet: result.snippet,
+        semanticStartOffset: result.startOffset,
+        semanticEndOffset: result.endOffset,
       };
     })
     .filter((result): result is SearchResultItem => result !== null);

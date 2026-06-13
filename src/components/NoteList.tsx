@@ -124,6 +124,24 @@ export default function NoteList() {
     }
   }, []);
 
+  const isSemanticOnly = (note: NoteIndex | SearchResult): note is SearchResult =>
+    'matchType' in note && note.matchType === 'semantic';
+  const semanticHighlightFor = useCallback((note: NoteIndex | SearchResult) => {
+    if (!isSemanticOnly(note)) return null;
+    if (
+      typeof note.semanticStartOffset !== 'number' ||
+      typeof note.semanticEndOffset !== 'number' ||
+      note.semanticEndOffset < note.semanticStartOffset
+    ) {
+      return null;
+    }
+    return {
+      noteId: note.id,
+      from: note.semanticStartOffset,
+      to: note.semanticEndOffset,
+    };
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (displayNotes.length === 0) return;
@@ -133,7 +151,7 @@ export default function NoteList() {
         const next = focusIndex === null ? 0 : Math.min(focusIndex + 1, displayNotes.length - 1);
         setFocusIndex(next);
         scrollIntoView(next);
-        void selectNote(displayNotes[next].id);
+        void selectNote(displayNotes[next].id, semanticHighlightFor(displayNotes[next]));
       } else if (e.key === 'ArrowUp' || e.key === 'k') {
         e.preventDefault();
         // At the top of the list, return focus to the search input
@@ -148,16 +166,16 @@ export default function NoteList() {
         const next = Math.max((focusIndex ?? 0) - 1, 0);
         setFocusIndex(next);
         scrollIntoView(next);
-        void selectNote(displayNotes[next].id);
+        void selectNote(displayNotes[next].id, semanticHighlightFor(displayNotes[next]));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const idx = focusIndex ?? 0;
         if (displayNotes[idx]) {
-          void selectNote(displayNotes[idx].id);
+          void selectNote(displayNotes[idx].id, semanticHighlightFor(displayNotes[idx]));
         }
       }
     },
-    [displayNotes, focusIndex, selectNote, scrollIntoView],
+    [displayNotes, focusIndex, selectNote, scrollIntoView, semanticHighlightFor],
   );
 
   const handleFocus = useCallback(() => {
@@ -167,9 +185,9 @@ export default function NoteList() {
     if (clickingRef.current) return;
     if (focusIndex === null && displayNotes.length > 0) {
       setFocusIndex(0);
-      void selectNote(displayNotes[0].id);
+      void selectNote(displayNotes[0].id, semanticHighlightFor(displayNotes[0]));
     }
-  }, [focusIndex, displayNotes, selectNote]);
+  }, [focusIndex, displayNotes, selectNote, semanticHighlightFor]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, note: NoteIndex | SearchResult) => {
@@ -239,8 +257,6 @@ export default function NoteList() {
       : 'Pull to refresh';
 
   const isEmpty = !loading && !searchLoading && displayNotes.length === 0;
-  const isSemanticOnly = (note: NoteIndex | SearchResult): note is SearchResult =>
-    'matchType' in note && note.matchType === 'semantic';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -284,7 +300,7 @@ export default function NoteList() {
             else itemRefs.current.delete(index);
           }}
           onClick={() => {
-            void selectNote(note.id);
+            void selectNote(note.id, semanticHighlightFor(note));
             setFocusIndex(index);
           }}
           onContextMenu={(e) => handleContextMenu(e, note)}

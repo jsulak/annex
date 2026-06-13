@@ -17,7 +17,7 @@ import { imageUpload, type UploadStatus } from './imageUpload.js';
 import { searchHighlightField } from './searchHighlight.js';
 import { markdownMarkupDecorations } from './markdownMarkupDecorations.js';
 
-export { setSearchTermsEffect } from './searchHighlight.js';
+export { setSearchTermsEffect, setSearchRangesEffect } from './searchHighlight.js';
 
 export interface EditorCallbacks {
   onUpdate: (content: string) => void;

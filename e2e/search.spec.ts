@@ -94,6 +94,10 @@ test.describe('Search — filtering and results', () => {
     await expect(result.getByText('Related')).toBeVisible();
     await expect(result.getByText('mentorship sessions')).toBeVisible();
 
+    await result.click();
+    await expect(page.locator('.cm-content')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.cm-search-highlight').first()).toContainText('Quiet mentorship sessions', { timeout: 5_000 });
+
     await request.delete(`/api/v1/notes/${id}`);
   });
 });

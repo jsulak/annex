@@ -29,6 +29,8 @@ async function search(q: string) {
     matchType?: string;
     semanticScore?: number;
     semanticSnippet?: string;
+    semanticStartOffset?: number;
+    semanticEndOffset?: number;
   }>;
 }
 
@@ -58,6 +60,8 @@ describe('semantic search', () => {
     expect(match?.matchType).toBe('semantic');
     expect(match?.semanticScore).toBeGreaterThanOrEqual(0.5);
     expect(match?.semanticSnippet).toContain('mentorship sessions');
+    expect(match?.semanticStartOffset).toEqual(expect.any(Number));
+    expect(match?.semanticEndOffset).toBeGreaterThan(match?.semanticStartOffset ?? 0);
 
     await http.delete(`/api/v1/notes/${id}`);
   });

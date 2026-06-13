@@ -14,6 +14,8 @@ export interface SemanticSearchResult {
   id: string;
   score: number;
   snippet: string;
+  startOffset: number;
+  endOffset: number;
 }
 
 interface SemanticIndexOptions {
@@ -158,8 +160,15 @@ export class SemanticIndex {
     return [...best.entries()]
       .map(([id, match]) => {
         const note = this.getNote(id);
+        const range = note ? semanticPassageRange(note.body, match.start, match.end) : null;
         return note
-          ? { id, score: match.score, snippet: semanticSnippet(note.body, match.start, match.end) }
+          ? {
+              id,
+              score: match.score,
+              snippet: semanticSnippet(note.body, range?.start ?? match.start, range?.end ?? match.end),
+              startOffset: range?.start ?? match.start,
+              endOffset: range?.end ?? match.end,
+            }
           : null;
       })
       .filter((result): result is SemanticSearchResult => result !== null)
@@ -376,6 +385,21 @@ function paragraphRanges(body: string): Array<{ start: number; end: number }> {
     if (match[0].length === 0) re.lastIndex++;
   }
   return ranges;
+}
+
+function semanticPassageRange(body: string, start: number, end: number): { start: number; end: number } {
+  const candidates = paragraphRanges(body)
+    .filter((range) => range.start >= start && range.end <= end)
+    .filter((range) => {
+      const text = body.slice(range.start, range.end).trim();
+      if (!text) return false;
+      if (/^#{1,6}\s+/.test(text)) return false;
+      if (/^(title|date|keywords):\s*/i.test(text)) return false;
+      return true;
+    });
+
+  if (candidates.length > 0) return candidates[0];
+  return { start, end };
 }
 
 function makeChunk(note: StoredNote, index: number, start: number, end: number): NoteChunk {

@@ -114,6 +114,7 @@ export default function EditorPane() {
   const searchFn = useStore((s) => s.search);
   const conflict = useStore((s) => s.conflict);
   const searchQuery = useStore((s) => s.searchQuery);
+  const semanticHighlight = useStore((s) => s.semanticHighlight);
   const fileListHidden = useStore((s) => s.fileListHidden);
   const setFileListHidden = useStore((s) => s.setFileListHidden);
   const hideMarkdownMarkup = useStore((s) => s.appSettings?.hideMarkdownMarkup ?? false);
@@ -266,6 +267,9 @@ export default function EditorPane() {
   }
 
   const previewBody = liveContent;
+  const activeSemanticHighlight = semanticHighlight?.noteId === selectedNote.id
+    ? semanticHighlight
+    : null;
 
   return (
     <div
@@ -325,7 +329,8 @@ export default function EditorPane() {
               onUploadStatus={handleUploadStatus}
               insertRef={insertRef}
               focusRequest={editorFocusRequest}
-              searchQuery={searchQuery}
+              searchQuery={activeSemanticHighlight ? '' : searchQuery}
+              semanticHighlight={activeSemanticHighlight}
               hideMarkdownMarkup={hideMarkdownMarkup}
             />
           </div>
@@ -339,7 +344,7 @@ export default function EditorPane() {
               filename={selectedNote?.filename}
               onNavigate={handleNavigate}
               onSearchTag={handleSearchTag}
-              searchQuery={searchQuery}
+              searchQuery={activeSemanticHighlight ? '' : searchQuery}
             />
           </div>
         )}

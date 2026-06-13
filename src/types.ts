@@ -21,10 +21,18 @@ export interface NoteDetail extends NoteIndex {
   etag: string;
 }
 
+export interface SemanticHighlight {
+  noteId: string;
+  from: number;
+  to: number;
+}
+
 export interface SearchResult extends NoteIndex {
   titleMatches: Array<[number, number]>;    // [offset, length]
   snippetMatches: Array<[number, number]>;  // [offset, length]
   matchType?: 'exact' | 'hybrid' | 'semantic';
   semanticScore?: number;
   semanticSnippet?: string;
+  semanticStartOffset?: number;
+  semanticEndOffset?: number;
 }

@@ -3,6 +3,11 @@ import { Decoration, EditorView } from '@codemirror/view';
 import type { DecorationSet } from '@codemirror/view';
 
 export const setSearchTermsEffect = StateEffect.define<string[]>();
+export interface SearchHighlightRange {
+  from: number;
+  to: number;
+}
+export const setSearchRangesEffect = StateEffect.define<SearchHighlightRange[]>();
 
 const searchMark = Decoration.mark({ class: 'cm-search-highlight' });
 
@@ -38,6 +43,30 @@ function buildDecorations(docText: string, terms: string[]): DecorationSet {
   return builder.finish();
 }
 
+function buildRangeDecorations(docLength: number, ranges: SearchHighlightRange[]): DecorationSet {
+  if (ranges.length === 0) return Decoration.none;
+
+  const normalized = ranges
+    .map((range) => ({
+      from: Math.max(0, Math.min(docLength, range.from)),
+      to: Math.max(0, Math.min(docLength, range.to)),
+    }))
+    .filter((range) => range.to > range.from)
+    .sort((a, b) => a.from - b.from);
+
+  if (normalized.length === 0) return Decoration.none;
+
+  const builder = new RangeSetBuilder<Decoration>();
+  let lastTo = -1;
+  for (const { from, to } of normalized) {
+    if (from >= lastTo) {
+      builder.add(from, to, searchMark);
+      lastTo = to;
+    }
+  }
+  return builder.finish();
+}
+
 export const searchHighlightField = StateField.define<DecorationSet>({
   create() {
     return Decoration.none;
@@ -48,6 +77,8 @@ export const searchHighlightField = StateField.define<DecorationSet>({
     for (const effect of tr.effects) {
       if (effect.is(setSearchTermsEffect)) {
         updated = buildDecorations(tr.newDoc.toString(), effect.value);
+      } else if (effect.is(setSearchRangesEffect)) {
+        updated = buildRangeDecorations(tr.newDoc.length, effect.value);
       }
     }
     return updated;

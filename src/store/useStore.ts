@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '../api/client.js';
-import type { NoteIndex, NoteDetail, SearchResult, ReferenceEntry } from '../types.js';
+import type { NoteIndex, NoteDetail, SearchResult, ReferenceEntry, SemanticHighlight } from '../types.js';
 
 function generateId(): string {
   return new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 12);
@@ -58,6 +58,7 @@ interface AppState {
   notes: NoteIndex[];
   selectedId: string | null;
   selectedNote: NoteDetail | null;
+  semanticHighlight: SemanticHighlight | null;
   loading: boolean;
   searchQuery: string;
   searchResults: SearchResult[] | null;
@@ -78,7 +79,7 @@ interface AppState {
   fetchSettings: () => Promise<void>;
   setAppSettings: (settings: AppSettings) => void;
   fetchNotes: () => Promise<void>;
-  selectNote: (id: string) => Promise<void>;
+  selectNote: (id: string, semanticHighlight?: SemanticHighlight | null) => Promise<void>;
   deselectNote: () => void;
   updateEtag: (etag: string) => void;
   updateNoteInList: (
@@ -136,6 +137,7 @@ export const useStore = create<AppState>((set, get) => ({
   notes: [],
   selectedId: null,
   selectedNote: null,
+  semanticHighlight: null,
   loading: false,
   searchQuery: '',
   searchResults: null,
@@ -190,8 +192,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  selectNote: async (id: string) => {
-    set({ selectedId: id, selectedNote: null });
+  selectNote: async (id: string, semanticHighlight = null) => {
+    set({ selectedId: id, selectedNote: null, semanticHighlight });
     try {
       const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
       if (res.ok) {
@@ -224,7 +226,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deselectNote: () => {
-    set({ selectedId: null, selectedNote: null });
+    set({ selectedId: null, selectedNote: null, semanticHighlight: null });
     if (window.location.pathname !== '/') {
       window.history.pushState(null, '', '/');
     }
@@ -280,6 +282,7 @@ export const useStore = create<AppState>((set, get) => ({
         notes: [noteIndex as NoteIndex, ...s.notes],
         selectedId: note.id,
         selectedNote: note,
+        semanticHighlight: null,
         searchQuery: '',
         searchResults: null,
         history: newHistory,
@@ -302,6 +305,7 @@ export const useStore = create<AppState>((set, get) => ({
           notes: s.notes.filter((n) => n.id !== id),
           selectedId: s.selectedId === id ? null : s.selectedId,
           selectedNote: s.selectedId === id ? null : s.selectedNote,
+          semanticHighlight: s.selectedId === id ? null : s.semanticHighlight,
           pendingDeleteId: null,
         }));
         return true;
@@ -343,6 +347,7 @@ export const useStore = create<AppState>((set, get) => ({
       notes: s.notes.filter((n) => n.id !== id),
       selectedId: s.selectedId === id ? null : s.selectedId,
       selectedNote: s.selectedId === id ? null : s.selectedNote,
+      semanticHighlight: s.selectedId === id ? null : s.semanticHighlight,
     }));
   },
 
@@ -416,7 +421,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   search: async (query: string) => {
-    set({ searchQuery: query, searchLoading: true, selectedId: null, selectedNote: null });
+    set({ searchQuery: query, searchLoading: true, selectedId: null, selectedNote: null, semanticHighlight: null });
     try {
       const res = await apiFetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
@@ -431,7 +436,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   clearSearch: () =>
-    set({ searchQuery: '', searchResults: null, searchLoading: false }),
+    set({ searchQuery: '', searchResults: null, searchLoading: false, semanticHighlight: null }),
 
   logout: async () => {
     await apiFetch('/api/v1/auth/logout', { method: 'POST' });
@@ -443,7 +448,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       set({ historyIndex: newIndex, _navigatingHistory: true });
-      void get().selectNote(history[newIndex]);
+      void get().selectNote(history[newIndex], null);
     }
   },
 
@@ -452,7 +457,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       set({ historyIndex: newIndex, _navigatingHistory: true });
-      void get().selectNote(history[newIndex]);
+      void get().selectNote(history[newIndex], null);
     }
   },
 
