@@ -4,12 +4,13 @@ import { useStore } from '../store/useStore.js';
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'conflict';
 
-const AUTO_SAVE_DELAY = 1000;
+const DEFAULT_AUTO_SAVE_DELAY = 1000;
 const SAVED_DISPLAY_DURATION = 1500;
 
 export function useAutoSave(
   noteId: string | null,
   etag: string | null,
+  autoSaveDelay = DEFAULT_AUTO_SAVE_DELAY,
 ): {
   handleChange: (content: string) => void;
   saveNow: () => Promise<void>;
@@ -140,8 +141,8 @@ export function useAutoSave(
       if (id && pendingContentRef.current !== null) {
         void doSave(id, pendingContentRef.current, currentEtagRef.current);
       }
-    }, AUTO_SAVE_DELAY);
-  }, [clearDebounce, clearSavedTimer, doSave]);
+    }, Math.max(200, autoSaveDelay));
+  }, [autoSaveDelay, clearDebounce, clearSavedTimer, doSave]);
 
   // Flush on note switch
   useEffect(() => {

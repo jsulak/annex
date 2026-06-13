@@ -23,11 +23,8 @@ const _initialTab: Tab = { id: 'tab-0', customTitle: null, selectedId: null, sea
 
 export interface AppSettings {
   autoSaveDelay: number;
-  showSnippets: boolean;
-  editorWidth: number;
   fontSize: number;
   noteTemplate: string;
-  indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
   lineHeight: number;
   hideMarkdownMarkup: boolean;
@@ -36,6 +33,18 @@ export interface AppSettings {
 function applySettingsToDOM(settings: AppSettings) {
   document.documentElement.style.setProperty('--font-size-editor', `${settings.fontSize}px`);
   document.documentElement.style.setProperty('--line-height-editor', `${settings.lineHeight ?? 1.6}`);
+  if (settings.darkMode === 'auto') {
+    delete document.documentElement.dataset.theme;
+  } else {
+    document.documentElement.dataset.theme = settings.darkMode;
+  }
+}
+
+function renderNoteTemplate(template: string, values: { id: string; title: string; date: string }): string {
+  return template
+    .replaceAll('{id}', values.id)
+    .replaceAll('{title}', values.title)
+    .replaceAll('{date}', values.date);
 }
 
 interface ConflictInfo {
@@ -250,7 +259,12 @@ export const useStore = create<AppState>((set, get) => ({
     const id = generateId();
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const body = title ? `Title:\t\t${title}\nDate:\t\t${dateStr}\nKeywords:\t\n\n\n\n\nBacklinks: [[${id}]]\n` : '';
+    const defaultTemplate = 'Title:\t\t{title}\nDate:\t\t{date}\nKeywords:\t\n\n\n\n\nBacklinks: [[{id}]]\n';
+    const configuredTemplate = get().appSettings?.noteTemplate;
+    const template = configuredTemplate && configuredTemplate.trim().length > 0
+      ? configuredTemplate
+      : defaultTemplate;
+    const body = title ? renderNoteTemplate(template, { id, title, date: dateStr }) : '';
     const filename = title ? `${id} ${title}.md` : undefined;
     const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`, {
       method: 'PUT',

@@ -98,7 +98,7 @@ describe('config API safety', () => {
           showSnippets: true,
           editorWidth: 720,
           fontSize: 14,
-          noteTemplate: '',
+          noteTemplate: 'Title: {title}',
           indexExtensions: ['.md'],
           darkMode: 'auto',
         },
@@ -109,6 +109,11 @@ describe('config API safety', () => {
       const config = await res.json();
       expect(config.settings.hideMarkdownMarkup).toBe(false);
       expect(config.settings.lineHeight).toBe(1.6);
+      expect(config.settings.noteTemplate).toBe('Title: {title}');
+      expect(config).not.toHaveProperty('savedSearches');
+      expect(config.settings).not.toHaveProperty('showSnippets');
+      expect(config.settings).not.toHaveProperty('editorWidth');
+      expect(config.settings).not.toHaveProperty('indexExtensions');
     } finally {
       await fs.writeFile(configPath, original);
     }
@@ -145,8 +150,8 @@ describe('config API safety', () => {
     const after = await (await http.get('/api/v1/config')).json();
     expect(after.settings.fontSize).toBe(15);
     expect(after.settings.hideMarkdownMarkup).toBe(true);
-    expect(after.settings.editorWidth).toBe(before.settings.editorWidth);
     expect(after.settings.autoSaveDelay).toBe(before.settings.autoSaveDelay);
+    expect(after.settings.noteTemplate).toBe(before.settings.noteTemplate);
     expect(after.settings.darkMode).toBe(before.settings.darkMode);
 
     // Restore
@@ -156,6 +161,26 @@ describe('config API safety', () => {
         hideMarkdownMarkup: before.settings.hideMarkdownMarkup,
       },
     });
+  });
+
+  test('PUT /config prunes unsupported settings fields', async () => {
+    const res = await http.put('/api/v1/config', {
+      settings: {
+        fontSize: 14,
+        showSnippets: true,
+        editorWidth: 720,
+        indexExtensions: ['.md', '.txt'],
+      },
+    });
+    expect(res.ok).toBe(true);
+
+    const config = await res.json();
+    expect(config.settings.fontSize).toBe(14);
+    expect(config.settings).not.toHaveProperty('showSnippets');
+    expect(config.settings).not.toHaveProperty('editorWidth');
+    expect(config.settings).not.toHaveProperty('indexExtensions');
+
+    await http.put('/api/v1/config', { settings: { fontSize: 13 } });
   });
 });
 

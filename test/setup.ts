@@ -35,14 +35,10 @@ export async function startTestServer(): Promise<TestContext> {
 
   const config = {
     passwordHash: '$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy',
-    savedSearches: [],
     settings: {
       autoSaveDelay: 500,
-      showSnippets: false,
-      editorWidth: 680,
       fontSize: 13,
-      noteTemplate: '',
-      indexExtensions: ['.md'],
+      noteTemplate: 'Title:\t\t{title}\nDate:\t\t{date}\nKeywords:\t\n\n\n\n\nBacklinks: [[{id}]]\n',
       darkMode: 'auto',
       lineHeight: 1.6,
       hideMarkdownMarkup: false,

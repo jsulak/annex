@@ -5,11 +5,8 @@ import { getSyncStatus, getSyncConnections, getSyncDevices, addSyncDevice, type 
 
 interface Settings {
   autoSaveDelay: number;
-  showSnippets: boolean;
-  editorWidth: number;
   fontSize: number;
   noteTemplate: string;
-  indexExtensions: string[];
   darkMode: 'auto' | 'light' | 'dark';
   lineHeight: number;
   hideMarkdownMarkup: boolean;
@@ -347,31 +344,6 @@ export default function SettingsPanel() {
               />
             </div>
 
-            {/* Show snippets */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={settings.showSnippets}
-                onChange={(e) => update('showSnippets', e.target.checked)}
-              />
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-primary)' }}>
-                Show snippets in note list
-              </span>
-            </label>
-
-            {/* Editor width */}
-            <div>
-              <div style={labelStyle}>Editor width (px)</div>
-              <input
-                type="number"
-                min={400}
-                step={10}
-                value={settings.editorWidth}
-                onChange={(e) => update('editorWidth', parseInt(e.target.value, 10) || 680)}
-                style={inputStyle}
-              />
-            </div>
-
             {/* Font size */}
             <div>
               <div style={labelStyle}>Font size (px)</div>
@@ -419,22 +391,6 @@ export default function SettingsPanel() {
                 value={settings.noteTemplate}
                 onChange={(e) => update('noteTemplate', e.target.value)}
                 style={{ ...inputStyle, resize: 'vertical' }}
-              />
-            </div>
-
-            {/* File extensions */}
-            <div>
-              <div style={labelStyle}>File extensions (comma-separated)</div>
-              <input
-                type="text"
-                value={settings.indexExtensions.join(', ')}
-                onChange={(e) =>
-                  update(
-                    'indexExtensions',
-                    e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
-                  )
-                }
-                style={inputStyle}
               />
             </div>
 

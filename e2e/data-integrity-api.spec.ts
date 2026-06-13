@@ -105,8 +105,8 @@ test.describe('Config API safety', () => {
     const after = await (await request.get('/api/v1/config')).json();
     expect(after.settings.fontSize).toBe(15);
     // Other settings should be unchanged
-    expect(after.settings.editorWidth).toBe(before.settings.editorWidth);
     expect(after.settings.autoSaveDelay).toBe(before.settings.autoSaveDelay);
+    expect(after.settings.noteTemplate).toBe(before.settings.noteTemplate);
     expect(after.settings.darkMode).toBe(before.settings.darkMode);
 
     // Restore

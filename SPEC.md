@@ -45,7 +45,7 @@ Annex is a single-user, self-hosted web application that replicates the core fun
 └──────────────────────────────────────────────────────────────┘
 ```
 
-The server is a single Node.js process. It serves the compiled React frontend as static files and also runs the API. There is no separate database — note content lives in `.md` files, and all other persistent state (session, saved searches, settings) lives in a `_annex.json` config file alongside the notes.
+The server is a single Node.js process. It serves the compiled React frontend as static files and also runs the API. There is no separate database — note content lives in `.md` files, and app settings live in a `_annex.json` config file alongside the notes.
 
 ---
 
@@ -172,12 +172,18 @@ A file `_annex.json` is maintained in the notes directory (or at `~/.annex/confi
 ```json
 {
   "passwordHash": "<bcrypt hash>",
-  "savedSearches": [{ "id": "...", "name": "...", "query": "..." }],
-  "settings": { "autoSaveDelay": 1000, "editorWidth": 680, "showSnippets": false }
+  "settings": {
+    "autoSaveDelay": 1000,
+    "fontSize": 13,
+    "noteTemplate": "Title:\t\t{title}\nDate:\t\t{date}\nKeywords:\t\n\n\n\n\nBacklinks: [[{id}]]\n",
+    "darkMode": "auto",
+    "lineHeight": 1.6,
+    "hideMarkdownMarkup": false
+  }
 }
 ```
 
-This file is filtered out of the note list (ignored during indexing). Syncthing syncs it like any other file — settings and saved searches are therefore shared across devices automatically.
+This file is filtered out of the note list (ignored during indexing). Syncthing syncs it like any other file, so settings are shared across devices automatically.
 
 ---
 
@@ -256,8 +262,8 @@ All routes prefixed `/api/v1/`. All requests/responses JSON. All routes except `
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/config` | Get saved searches + settings |
-| `PUT` | `/config` | Update saved searches + settings |
+| `GET` | `/config` | Get settings |
+| `PUT` | `/config` | Update settings |
 
 ### Auth
 
@@ -407,15 +413,13 @@ interface NoteDetail extends NoteIndex {
 
 interface Config {
   passwordHash: string;
-  savedSearches: Array<{ id: string; name: string; query: string }>;
   settings: {
     autoSaveDelay: number;
-    showSnippets: boolean;
-    editorWidth: number;
     fontSize: number;
     noteTemplate: string;
-    indexExtensions: string[];
     darkMode: 'auto' | 'light' | 'dark';
+    lineHeight: number;
+    hideMarkdownMarkup: boolean;
   };
 }
 ```
@@ -719,10 +723,9 @@ annex/
 14. **Conflict detection**: etag on `GET`, `If-Match` on `PUT`, `409` handling in client.
 15. **Tags modal + Backlinks panel**.
 16. **Settings panel**: All options persisted via `PUT /config`.
-17. **Saved searches**: Save/restore, display below search bar.
-18. **Asset serving**: `GET /assets/:filename` for inline images in preview.
-19. **Deploy tooling**: Terraform IaC, Ansible provision + deploy playbooks, Makefile, VPS hardening.
-20. **Polish**: Keyboard shortcut help (`?`), full error states, responsive layout.
+17. **Asset serving**: `GET /assets/:filename` for inline images in preview.
+18. **Deploy tooling**: Terraform IaC, Ansible provision + deploy playbooks, Makefile, VPS hardening.
+19. **Polish**: Keyboard shortcut help (`?`), full error states, responsive layout.
 
 ---
 
@@ -799,7 +802,6 @@ Open: http://localhost:5173
 - [ ] Conflict detection
 - [ ] Tags modal + Backlinks
 - [ ] Settings panel
-- [ ] Saved searches
 - [ ] Asset serving
 - [ ] Deploy tooling
 - [ ] Polish

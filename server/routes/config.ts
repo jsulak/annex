@@ -2,11 +2,10 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { readConfig, writeConfig, Config } from '../lib/config.js';
 
 export async function registerConfig(app: FastifyInstance) {
-  // GET /api/v1/config — returns settings + savedSearches (omits passwordHash)
+  // GET /api/v1/config — returns settings (omits passwordHash)
   app.get('/api/v1/config', async (_request: FastifyRequest, _reply: FastifyReply) => {
     const config = await readConfig();
     return {
-      savedSearches: config.savedSearches,
       settings: config.settings,
     };
   });
@@ -22,10 +21,10 @@ export async function registerConfig(app: FastifyInstance) {
     const config = await readConfig();
     config.settings = { ...config.settings, ...body.settings };
     await writeConfig(config);
+    const updated = await readConfig();
 
     return {
-      savedSearches: config.savedSearches,
-      settings: config.settings,
+      settings: updated.settings,
     };
   });
 }

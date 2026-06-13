@@ -117,6 +117,7 @@ export default function EditorPane() {
   const fileListHidden = useStore((s) => s.fileListHidden);
   const setFileListHidden = useStore((s) => s.setFileListHidden);
   const hideMarkdownMarkup = useStore((s) => s.appSettings?.hideMarkdownMarkup ?? false);
+  const autoSaveDelay = useStore((s) => s.appSettings?.autoSaveDelay ?? 1000);
   const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
   const [uploadMessage, setUploadMessage] = useState<string | undefined>();
@@ -129,6 +130,7 @@ export default function EditorPane() {
   const { handleChange: autoSaveChange, saveNow, saveStatus } = useAutoSave(
     selectedId,
     selectedNote?.etag ?? null,
+    autoSaveDelay,
   );
 
   // Wrap handleChange to also update liveContent for split preview

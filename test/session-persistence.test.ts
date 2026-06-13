@@ -59,10 +59,11 @@ async function buildTestApp(store: FileSessionStore): Promise<FastifyInstance> {
 async function writeConfig(passwordHash = PASSWORD_HASH): Promise<void> {
   const config = {
     passwordHash,
-    savedSearches: [],
     settings: {
-      autoSaveDelay: 500, showSnippets: false, editorWidth: 680,
-      fontSize: 13, noteTemplate: '', indexExtensions: ['.md'], darkMode: 'auto',
+      autoSaveDelay: 500,
+      fontSize: 13,
+      noteTemplate: 'Title:\t\t{title}\nDate:\t\t{date}\nKeywords:\t\n\n\n\n\nBacklinks: [[{id}]]\n',
+      darkMode: 'auto',
       lineHeight: 1.6, hideMarkdownMarkup: false,
     },
   };

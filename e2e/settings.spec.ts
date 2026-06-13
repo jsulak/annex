@@ -66,12 +66,13 @@ test.describe('Settings panel', () => {
     await expect(select.locator('option')).toHaveCount(3);
   });
 
-  test('shows show-snippets checkbox', async ({ page }) => {
+  test('does not show unsupported settings', async ({ page }) => {
     await page.locator('button[title="Settings (Cmd+,)"]').click();
-    await expect(page.getByText('Show snippets in note list')).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText('Auto-save delay')).toBeVisible({ timeout: 3_000 });
 
-    const checkbox = page.getByRole('checkbox', { name: 'Show snippets in note list' });
-    await expect(checkbox).toBeVisible();
+    await expect(page.getByText('Show snippets in note list')).not.toBeVisible();
+    await expect(page.getByText('Editor width')).not.toBeVisible();
+    await expect(page.getByText('File extensions')).not.toBeVisible();
   });
 
   test('shows change password section', async ({ page }) => {
@@ -117,6 +118,22 @@ test.describe('Settings panel', () => {
     await page.getByRole('button', { name: 'Save settings' }).click();
     await expect(page.getByText('Settings saved')).toBeVisible({ timeout: 5_000 });
   });
+
+  test('theme setting applies document theme override', async ({ page }) => {
+    await page.locator('button[title="Settings (Cmd+,)"]').click();
+    await expect(page.getByText('Theme')).toBeVisible({ timeout: 3_000 });
+
+    const select = page.locator('select');
+    await select.selectOption('dark');
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    await expect(page.getByText('Settings saved')).toBeVisible({ timeout: 5_000 });
+
+    await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+
+    await select.selectOption('auto');
+    await page.getByRole('button', { name: 'Save settings' }).click();
+    await expect(page.getByText('Settings saved')).toBeVisible({ timeout: 5_000 });
+  });
 });
 
 test.describe('Settings API', () => {
@@ -128,9 +145,14 @@ test.describe('Settings API', () => {
     expect(data).toHaveProperty('settings');
     expect(data.settings).toHaveProperty('autoSaveDelay');
     expect(data.settings).toHaveProperty('fontSize');
+    expect(data.settings).toHaveProperty('noteTemplate');
     expect(data.settings).toHaveProperty('darkMode');
     expect(data.settings).toHaveProperty('lineHeight');
     expect(data.settings).toHaveProperty('hideMarkdownMarkup');
+    expect(data).not.toHaveProperty('savedSearches');
+    expect(data.settings).not.toHaveProperty('showSnippets');
+    expect(data.settings).not.toHaveProperty('editorWidth');
+    expect(data.settings).not.toHaveProperty('indexExtensions');
     // passwordHash should NOT be exposed
     expect(data).not.toHaveProperty('passwordHash');
   });
@@ -185,6 +207,31 @@ test.describe('Settings API', () => {
     await request.put('/api/v1/config', {
       headers: await csrfHeaders(request),
       data: { settings: { hideMarkdownMarkup: before.settings.hideMarkdownMarkup } },
+    });
+  });
+
+  test('PUT /api/v1/config prunes unsupported settings fields', async ({ request }) => {
+    const response = await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
+      data: {
+        settings: {
+          fontSize: 14,
+          showSnippets: true,
+          editorWidth: 720,
+          indexExtensions: ['.md', '.txt'],
+        },
+      },
+    });
+    expect(response.ok()).toBe(true);
+    const data = await response.json();
+    expect(data.settings.fontSize).toBe(14);
+    expect(data.settings).not.toHaveProperty('showSnippets');
+    expect(data.settings).not.toHaveProperty('editorWidth');
+    expect(data.settings).not.toHaveProperty('indexExtensions');
+
+    await request.put('/api/v1/config', {
+      headers: await csrfHeaders(request),
+      data: { settings: { fontSize: 13 } },
     });
   });
 

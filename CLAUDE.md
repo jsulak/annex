@@ -139,6 +139,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] npm audit --audit-level=high in deploy playbook (blocks deploy on high/critical)
 - [x] Security audit high-severity remediation (block SVG serving/uploads, remove app-user passwordless sudo)
 - [x] Security audit medium-severity remediation (restrict assets to media/, invalidate all sessions on password change)
+- [x] `_annex.json` config cleanup (remove vestigial settings, prune stale keys, wire retained settings)
 
 
 ## Testing
