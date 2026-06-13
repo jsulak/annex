@@ -257,6 +257,100 @@ test.describe('Search — hashtag as tag search', () => {
     await request.delete(`/api/v1/notes/${taggedId}`);
     await request.delete(`/api/v1/notes/${plainId}`);
   });
+
+  test('searching #reference-key finds definitions and citations, not plain mentions', async ({ page, request }) => {
+    const definitionId = nextId();
+    const citationId = nextId();
+    const plainId = nextId();
+
+    await request.put(`/api/v1/notes/${definitionId}`, {
+      data: {
+        body: '# Reference Definition\n\n[#drucker1967]: Peter Drucker (1967): _The Effective Executive_.',
+      },
+    });
+    await request.put(`/api/v1/notes/${citationId}`, {
+      data: { body: '# Reference Citation\n\nThis matters [54][#drucker1967].' },
+    });
+    await request.put(`/api/v1/notes/${plainId}`, {
+      data: { body: '# Plain Mention\n\nThis mentions drucker1967 as text only.' },
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#search-input').fill('#drucker1967');
+
+    await expect(page.locator('#note-list').getByText(`${definitionId} Untitled`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText(`${citationId} Untitled`)).toBeVisible();
+    await expect(page.locator('#note-list').getByText(`${plainId} Untitled`)).not.toBeVisible();
+
+    await request.delete(`/api/v1/notes/${definitionId}`);
+    await request.delete(`/api/v1/notes/${citationId}`);
+    await request.delete(`/api/v1/notes/${plainId}`);
+  });
+
+  test('search hashtag autocomplete suggests both tags and references', async ({ page, request }) => {
+    const referenceId = nextId();
+    const tagId = nextId();
+
+    await request.put(`/api/v1/notes/${referenceId}`, {
+      data: {
+        body: '# Drucker Source\n\n[#drucker1967]: Peter Drucker (1967): _The Effective Executive_.',
+      },
+    });
+    await request.put(`/api/v1/notes/${tagId}`, {
+      data: { body: '# Drucker Tag\n\n#drucker-reading' },
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#search-input').fill('#druck');
+
+    const listbox = page.getByRole('listbox', { name: 'Search hashtag suggestions' });
+    await expect(listbox).toBeVisible({ timeout: 5_000 });
+    await expect(listbox.getByRole('option').filter({ hasText: '#drucker1967' })).toContainText('reference');
+    await expect(listbox.getByRole('option').filter({ hasText: '#drucker-reading' })).toContainText('tag');
+
+    await request.delete(`/api/v1/notes/${referenceId}`);
+    await request.delete(`/api/v1/notes/${tagId}`);
+  });
+
+  test('search hashtag autocomplete replaces only the current token', async ({ page, request }) => {
+    const matchingId = nextId();
+    const refOnlyId = nextId();
+    const sourceId = nextId();
+
+    await request.put(`/api/v1/notes/${matchingId}`, {
+      data: { body: '# Matching Citation\n\nleadership [54][#drucker1967].' },
+    });
+    await request.put(`/api/v1/notes/${refOnlyId}`, {
+      data: { body: '# Reference Only\n\n[55][#drucker1967].' },
+    });
+    await request.put(`/api/v1/notes/${sourceId}`, {
+      data: {
+        body: '# Drucker Source\n\n[#drucker1967]: Peter Drucker (1967): _The Effective Executive_.',
+      },
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#search-input').fill('leadership #dru');
+
+    const option = page
+      .getByRole('listbox', { name: 'Search hashtag suggestions' })
+      .getByRole('option')
+      .filter({ hasText: '#drucker1967' })
+      .first();
+    await expect(option).toBeVisible({ timeout: 5_000 });
+    await option.click();
+
+    await expect(page.locator('#search-input')).toHaveValue('leadership #drucker1967');
+    await expect(page.locator('#note-list').getByText(`${matchingId} Untitled`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#note-list').getByText(`${refOnlyId} Untitled`)).not.toBeVisible();
+
+    await request.delete(`/api/v1/notes/${matchingId}`);
+    await request.delete(`/api/v1/notes/${refOnlyId}`);
+    await request.delete(`/api/v1/notes/${sourceId}`);
+  });
 });
 
 test.describe('Search — debounce behavior', () => {

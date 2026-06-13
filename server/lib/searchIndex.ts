@@ -14,7 +14,7 @@ interface StoredNote extends NoteIndex {
 interface ParsedQuery {
   terms: string[];      // plain words (ANDed)
   phrases: string[];    // "exact phrases"
-  tags: string[];       // #tags
+  tags: string[];       // #hashtag filters: tags, reference definitions, or citations
   negations: string[];  // NOT keywords
 }
 
@@ -154,6 +154,19 @@ function directScan(term: string): Set<string> {
   return ids;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** A #key query matches topical tags, reference definitions, or page citations. */
+function noteMatchesHashtag(note: StoredNote, key: string): boolean {
+  if (note.tags.includes(key)) return true;
+  if (note.references.some((ref) => ref.key.toLowerCase() === key)) return true;
+
+  const citationRe = new RegExp(`\\[[^\\]\\n]+\\]\\[#${escapeRegExp(key)}\\]`, 'i');
+  return citationRe.test(note.body);
+}
+
 /** Search flexsearch for each term and intersect results (AND logic). */
 function intersectSearchResults(terms: string[]): Set<string> {
   let result: Set<string> | null = null;
@@ -210,8 +223,8 @@ export function search(rawQuery: string, limit = 50): SearchResultItem[] {
     );
     if (!phrasesMatch) continue;
 
-    // Check tag matches
-    const tagsMatch = tags.every((t) => note.tags.includes(t));
+    // Check hashtag matches
+    const tagsMatch = tags.every((t) => noteMatchesHashtag(note, t));
     if (!tagsMatch) continue;
 
     // Check negations (exclude if any negation term is present)

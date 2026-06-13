@@ -124,6 +124,7 @@ Work through these in order. Do not move to the next task until the current one 
 - [x] Tag search filters by parsed note tags rather than matching untagged body text
 - [x] Asset serving (GET /assets/:filename)
 - [x] Reference/bibliography autocomplete (reference definitions + page citations)
+- [x] Reference-key search and combined tag/reference search autocomplete
 - [x] Add linting / code analysis
 - [x] Lightweight service monitoring
 - [x] Deploy tooling (Ansible provision + deploy playbooks, ecosystem.config.cjs, Caddyfile template)

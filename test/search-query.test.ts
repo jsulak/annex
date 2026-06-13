@@ -259,6 +259,66 @@ describe('search — hashtag as tag search', () => {
     expect(results.some((r: { filename: string }) => r.filename === '202401151432 Sample Note.md')).toBe(true);
     expect(results.some((r: { filename: string }) => r.filename === '202401151434 Third Note.md')).toBe(true);
   });
+
+  test('#reference-key search finds notes defining that reference', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Definition\n\n[#drucker1967]: Peter Drucker (1967): _The Effective Executive_.',
+    });
+
+    const results = await (await http.get('/api/v1/search?q=%23drucker1967')).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('#reference-key search finds notes citing that reference', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Citation\n\nThis matters [54][#drucker1967].',
+    });
+
+    const results = await (await http.get('/api/v1/search?q=%23drucker1967')).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(true);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('#reference-key search does not match plain key mentions', async () => {
+    const id = nextId();
+    await http.put(`/api/v1/notes/${id}`, {
+      body: '# Plain Mention\n\nThis mentions drucker1967 without a citation or definition.',
+    });
+
+    const results = await (await http.get('/api/v1/search?q=%23drucker1967')).json();
+    expect(results.some((r: { id: string }) => r.id === id)).toBe(false);
+
+    await http.delete(`/api/v1/notes/${id}`);
+  });
+
+  test('multiple #filters require each filter to match by tag or reference', async () => {
+    const matchingId = nextId();
+    const missingTagId = nextId();
+    const missingReferenceId = nextId();
+    await http.put(`/api/v1/notes/${matchingId}`, {
+      body: '# Both\n\n#leadership and [54][#drucker1967].',
+    });
+    await http.put(`/api/v1/notes/${missingTagId}`, {
+      body: '# Only Reference\n\n[54][#drucker1967].',
+    });
+    await http.put(`/api/v1/notes/${missingReferenceId}`, {
+      body: '# Only Tag\n\n#leadership only.',
+    });
+
+    const results = await (await http.get('/api/v1/search?q=%23leadership%20%23drucker1967')).json();
+    expect(results.some((r: { id: string }) => r.id === matchingId)).toBe(true);
+    expect(results.some((r: { id: string }) => r.id === missingTagId)).toBe(false);
+    expect(results.some((r: { id: string }) => r.id === missingReferenceId)).toBe(false);
+
+    await http.delete(`/api/v1/notes/${matchingId}`);
+    await http.delete(`/api/v1/notes/${missingTagId}`);
+    await http.delete(`/api/v1/notes/${missingReferenceId}`);
+  });
 });
 
 describe('search — case sensitivity', () => {

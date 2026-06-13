@@ -17,8 +17,8 @@ This is the software that I want to use; it is probably not the software that yo
 ## Features
 
 - **Plain text notes** — `.md` files with `YYYYMMDDHHMM Title.md` naming convention, fully compatible with The Archive
-- **Full-text search** — in-memory Flexsearch index with sub-millisecond results
-- **Wiki-links and tags** — `[[note links]]` and `#tags` with autocomplete, clickable in both editor and preview
+- **Full-text search** — in-memory Flexsearch index with structured `#tag` / `#reference` filters and search-bar autocomplete
+- **Wiki-links, tags, and references** — `[[note links]]`, `#tags`, and Markdown reference citations with autocomplete
 - **Live sync** — Syncthing keeps notes in sync between VPS and Mac; SSE pushes external changes to the browser in real time
 - **Conflict detection** — etag-based optimistic concurrency prevents overwrites from concurrent edits
 - **CodeMirror 6 editor** — Markdown syntax highlighting, auto-save, faded formatting marks, inline link decorations
@@ -86,6 +86,20 @@ npm test
 # End-to-end tests (Playwright)
 npm run test:e2e
 ```
+
+## Search Syntax
+
+The search box supports plain words, exact phrases, negation, and structured hashtag filters:
+
+```text
+leadership "effective executive" NOT meeting #drucker1967
+```
+
+- Plain words are ANDed across filename, title, and body.
+- Quoted phrases match exact text case-insensitively.
+- `NOT word` excludes notes containing that word.
+- `#key` matches a normal tag, a reference definition like `[#drucker1967]: ...`, or a citation like `[54][#drucker1967]`.
+- While typing a `#...` token in the search box, autocomplete suggests both tags and reference keys; choosing one replaces only the current token, so `leadership #dru` can become `leadership #drucker1967`.
 
 ## Deployment
 
