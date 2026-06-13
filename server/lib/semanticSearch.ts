@@ -41,8 +41,8 @@ interface ChunkRow {
   norm: number;
 }
 
-const DEFAULT_MODEL = 'text-embedding-3-small';
-const DEFAULT_MIN_SCORE = 0.25;
+const DEFAULT_MODEL = 'text-embedding-3-large';
+const DEFAULT_MIN_SCORE = 0.3;
 const CHUNK_TARGET_CHARS = 2500;
 const CHUNK_OVERLAP_CHARS = 250;
 
@@ -97,6 +97,7 @@ export class SemanticIndex {
     this.provider = options.provider;
     this.getNote = options.getNote;
     this.prepareSchema();
+    this.pruneInactiveModels();
   }
 
   start(notes: StoredNote[]): void {
@@ -289,6 +290,19 @@ export class SemanticIndex {
   private deleteNote(id: string): void {
     this.db.prepare('DELETE FROM semantic_chunks WHERE note_id = ?').run(id);
     this.db.prepare('DELETE FROM semantic_notes WHERE note_id = ?').run(id);
+  }
+
+  private pruneInactiveModels(): void {
+    const staleIds = this.db.prepare(`
+      SELECT note_id FROM semantic_notes WHERE model != ?
+    `).all(this.model) as Array<{ note_id: string }>;
+
+    const removeStale = this.db.transaction(() => {
+      for (const row of staleIds) {
+        this.deleteNote(row.note_id);
+      }
+    });
+    removeStale();
   }
 
   private disable(message: string, err: unknown): void {

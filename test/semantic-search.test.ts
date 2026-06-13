@@ -147,6 +147,63 @@ describe('semantic search', () => {
     );
     expect(deletedResults.some((item) => item.id === id)).toBe(false);
   });
+
+  test('removes cached chunks from inactive embedding models', async () => {
+    class ConstantProvider implements EmbeddingProvider {
+      async embed(input: string[]): Promise<number[][]> {
+        return input.map(() => [1, 0, 0]);
+      }
+    }
+
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-semantic-prune-'));
+    const dbPath = path.join(tmpDir, 'semantic.sqlite');
+    const note = {
+      id: 'model-switch-note',
+      filename: 'model-switch-note.md',
+      title: 'Model Switch Note',
+      snippet: 'Cached note',
+      tags: [],
+      links: [],
+      references: [],
+      createdAt: new Date().toISOString(),
+      modifiedAt: new Date().toISOString(),
+      body: '# Cached Note\n\nThis row uses a previous embedding model.',
+    };
+
+    const staleIndex = new SemanticIndex({
+      dbFile: dbPath,
+      model: 'old-model',
+      minScore: 0.5,
+      provider: new ConstantProvider(),
+      getNote: (id) => id === note.id ? note : undefined,
+    });
+    staleIndex.start([note]);
+
+    await waitFor(
+      async () => staleIndex.search('anything', 5, new Set(), () => true),
+      (items) => items.length === 1,
+    );
+    staleIndex.close();
+
+    const activeIndex = new SemanticIndex({
+      dbFile: dbPath,
+      model: 'new-model',
+      minScore: 0.5,
+      provider: new ConstantProvider(),
+      getNote: (id) => id === note.id ? note : undefined,
+    });
+
+    const db = new Database(dbPath, { readonly: true });
+    const noteRows = db.prepare('SELECT * FROM semantic_notes').all();
+    const chunkRows = db.prepare('SELECT * FROM semantic_chunks').all();
+    db.close();
+
+    expect(noteRows).toHaveLength(0);
+    expect(chunkRows).toHaveLength(0);
+
+    activeIndex.close();
+    await fs.rm(tmpDir, { recursive: true, force: true });
+  });
 });
 
 describe('semantic index failure handling', () => {
