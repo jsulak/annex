@@ -1,13 +1,17 @@
 import { Index } from 'flexsearch';
 import { listNoteFiles, readNoteFile, statNoteFile } from './fileStore.js';
 import { parseNote, type NoteIndex } from './noteParser.js';
+import { createSemanticIndexFromEnv, type SemanticIndex } from './semanticSearch.js';
 
 export interface SearchResultItem extends NoteIndex {
   titleMatches: Array<[number, number]>;  // [offset, length]
   snippetMatches: Array<[number, number]>;
+  matchType?: 'exact' | 'hybrid' | 'semantic';
+  semanticScore?: number;
+  semanticSnippet?: string;
 }
 
-interface StoredNote extends NoteIndex {
+export interface StoredNote extends NoteIndex {
   body: string;
 }
 
@@ -20,6 +24,7 @@ interface ParsedQuery {
 
 const noteStore = new Map<string, StoredNote>();
 const flexIndex = new Index({ tokenize: 'forward', cache: 100 });
+let semanticIndex: SemanticIndex | null = null;
 
 /** Build the full index from disk at startup. */
 export async function buildIndex(notesDir: string): Promise<number> {
@@ -48,6 +53,7 @@ export async function buildIndex(notesDir: string): Promise<number> {
 export function addToIndex(note: StoredNote): void {
   noteStore.set(note.id, note);
   flexIndex.update(note.id, `${note.filename} ${note.title} ${note.body}`);
+  semanticIndex?.scheduleReindex(note);
 }
 
 /** Return the number of notes currently in the index. */
@@ -59,6 +65,28 @@ export function getIndexSize(): number {
 export function removeFromIndex(id: string): void {
   noteStore.delete(id);
   flexIndex.remove(id);
+  semanticIndex?.remove(id);
+}
+
+export function getStoredNote(id: string): StoredNote | undefined {
+  return noteStore.get(id);
+}
+
+export function getStoredNotes(): StoredNote[] {
+  return [...noteStore.values()];
+}
+
+export function initializeSemanticSearch(): boolean {
+  if (semanticIndex) semanticIndex.close();
+  semanticIndex = createSemanticIndexFromEnv(getStoredNote);
+  if (!semanticIndex) return false;
+  semanticIndex.start(getStoredNotes());
+  return true;
+}
+
+export function shutdownSemanticSearch(): void {
+  semanticIndex?.close();
+  semanticIndex = null;
 }
 
 /** Parse a search query into structured parts. */
@@ -167,6 +195,24 @@ function noteMatchesHashtag(note: StoredNote, key: string): boolean {
   return citationRe.test(note.body);
 }
 
+function noteMatchesDeterministicFilters(note: StoredNote, parsed: ParsedQuery): boolean {
+  const bodyLower = note.body.toLowerCase();
+  const titleLower = note.title.toLowerCase();
+  const combined = `${titleLower} ${bodyLower}`;
+
+  const phrasesMatch = parsed.phrases.every(
+    (p) => combined.includes(p.toLowerCase()),
+  );
+  if (!phrasesMatch) return false;
+
+  const tagsMatch = parsed.tags.every((t) => noteMatchesHashtag(note, t));
+  if (!tagsMatch) return false;
+
+  return !parsed.negations.some(
+    (n) => combined.includes(n.toLowerCase()),
+  );
+}
+
 /** Search flexsearch for each term and intersect results (AND logic). */
 function intersectSearchResults(terms: string[]): Set<string> {
   let result: Set<string> | null = null;
@@ -188,9 +234,9 @@ function intersectSearchResults(terms: string[]): Set<string> {
 }
 
 /** Run a search query and return results with match offsets. */
-export function search(rawQuery: string, limit = 50): SearchResultItem[] {
+export function searchExact(rawQuery: string, limit = 50): SearchResultItem[] {
   const parsed = parseQuery(rawQuery);
-  const { terms, phrases, tags, negations } = parsed;
+  const { terms, phrases } = parsed;
 
   // Get candidates
   let candidateIds: Set<string>;
@@ -213,25 +259,7 @@ export function search(rawQuery: string, limit = 50): SearchResultItem[] {
     const note = noteStore.get(id);
     if (!note) continue;
 
-    const bodyLower = note.body.toLowerCase();
-    const titleLower = note.title.toLowerCase();
-    const combined = `${titleLower} ${bodyLower}`;
-
-    // Check phrase matches (exact, case-insensitive)
-    const phrasesMatch = phrases.every(
-      (p) => combined.includes(p.toLowerCase()),
-    );
-    if (!phrasesMatch) continue;
-
-    // Check hashtag matches
-    const tagsMatch = tags.every((t) => noteMatchesHashtag(note, t));
-    if (!tagsMatch) continue;
-
-    // Check negations (exclude if any negation term is present)
-    const hasNegation = negations.some(
-      (n) => combined.includes(n.toLowerCase()),
-    );
-    if (hasNegation) continue;
+    if (!noteMatchesDeterministicFilters(note, parsed)) continue;
 
     // Generate snippet and calculate match offsets
     const highlightTerms = [...terms, ...phrases];
@@ -268,4 +296,63 @@ export function search(rawQuery: string, limit = 50): SearchResultItem[] {
   results.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
 
   return results.slice(0, limit);
+}
+
+/** Run hybrid search: exact Flexsearch first, semantic-only results appended. */
+export async function search(rawQuery: string, limit = 50): Promise<SearchResultItem[]> {
+  const exactResults = searchExact(rawQuery, limit);
+  if (!semanticIndex?.isReady() || exactResults.length >= limit) return exactResults;
+
+  const parsed = parseQuery(rawQuery);
+  const exactIds = new Set(exactResults.map((result) => result.id));
+  let semanticResults;
+  try {
+    semanticResults = await semanticIndex.search(
+      rawQuery,
+      limit,
+      new Set<string>(),
+      (note) => noteMatchesDeterministicFilters(note, parsed),
+    );
+  } catch (err) {
+    console.error('Semantic search failed:', err);
+    return exactResults;
+  }
+
+  const semanticById = new Map(semanticResults.map((result) => [result.id, result]));
+  const enrichedExact = exactResults.map((result) => {
+    const semantic = semanticById.get(result.id);
+    if (!semantic) return { ...result, matchType: 'exact' as const };
+    return {
+      ...result,
+      matchType: 'hybrid' as const,
+      semanticScore: semantic.score,
+    };
+  });
+
+  const semanticOnly = semanticResults
+    .filter((result) => !exactIds.has(result.id))
+    .slice(0, Math.max(0, limit - exactResults.length))
+    .map((result): SearchResultItem | null => {
+      const note = noteStore.get(result.id);
+      if (!note) return null;
+      return {
+        id: note.id,
+        filename: note.filename,
+        title: note.title,
+        snippet: note.snippet,
+        tags: note.tags,
+        links: note.links,
+        references: note.references,
+        createdAt: note.createdAt,
+        modifiedAt: note.modifiedAt,
+        titleMatches: [],
+        snippetMatches: [],
+        matchType: 'semantic',
+        semanticScore: result.score,
+        semanticSnippet: result.snippet,
+      };
+    })
+    .filter((result): result is SearchResultItem => result !== null);
+
+  return [...enrichedExact, ...semanticOnly];
 }

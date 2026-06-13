@@ -22,6 +22,10 @@
           - fail2ban
           - unattended-upgrades
           - apt-listchanges
+          - build-essential
+          - python3
+          - make
+          - g++
         state: present
 
     # ── Automatic security updates ───────────────────────────

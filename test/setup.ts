@@ -15,7 +15,7 @@ import { registerConfig } from '../server/routes/config.js';
 import { registerSync } from '../server/routes/sync.js';
 import { registerAssets } from '../server/routes/assets.js';
 import { registerMedia } from '../server/routes/media.js';
-import { buildIndex } from '../server/lib/searchIndex.js';
+import { buildIndex, initializeSemanticSearch, shutdownSemanticSearch } from '../server/lib/searchIndex.js';
 import { startWatcher, stopWatcher } from '../server/lib/watcher.js';
 
 const SEED_DIR = path.join(import.meta.dirname, '..', 'e2e', 'fixtures', 'seed-notes');
@@ -27,11 +27,40 @@ export interface TestContext {
   cookie: string;
   csrfToken: string;
   app: FastifyInstance;
+  envSnapshot: Record<string, string | undefined>;
+  semanticIndexFile: string | null;
 }
 
-export async function startTestServer(): Promise<TestContext> {
+interface StartTestServerOptions {
+  semanticSearch?: boolean;
+}
+
+const SEMANTIC_ENV_KEYS = [
+  'OPENAI_API_KEY',
+  'OPENAI_EMBEDDING_MODEL',
+  'SEMANTIC_EMBEDDING_PROVIDER',
+  'SEMANTIC_INDEX_FILE',
+  'SEMANTIC_MIN_SCORE',
+] as const;
+
+export async function startTestServer(options: StartTestServerOptions = {}): Promise<TestContext> {
   // Create temp dir with seed notes
   const notesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-test-'));
+  const semanticIndexFile = options.semanticSearch
+    ? path.join(notesDir, '..', `${path.basename(notesDir)}-semantic.sqlite`)
+    : null;
+  const envSnapshot = Object.fromEntries(
+    SEMANTIC_ENV_KEYS.map((key) => [key, process.env[key]]),
+  ) as Record<string, string | undefined>;
+
+  for (const key of SEMANTIC_ENV_KEYS) {
+    delete process.env[key];
+  }
+  if (options.semanticSearch) {
+    process.env.SEMANTIC_EMBEDDING_PROVIDER = 'fake';
+    process.env.SEMANTIC_INDEX_FILE = semanticIndexFile ?? '';
+    process.env.SEMANTIC_MIN_SCORE = '0.5';
+  }
 
   const config = {
     passwordHash: '$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy',
@@ -94,6 +123,7 @@ export async function startTestServer(): Promise<TestContext> {
   });
 
   await buildIndex(notesDir);
+  initializeSemanticSearch();
   await startWatcher(notesDir);
 
   const address = await app.listen({ port: 0, host: '127.0.0.1' });
@@ -113,13 +143,26 @@ export async function startTestServer(): Promise<TestContext> {
   });
   const { token: csrfToken } = await csrfRes.json() as { token: string };
 
-  return { baseUrl: address, notesDir, cookie, csrfToken, app };
+  return { baseUrl: address, notesDir, cookie, csrfToken, app, envSnapshot, semanticIndexFile };
 }
 
 export async function stopTestServer(ctx: TestContext): Promise<void> {
   await stopWatcher();
+  shutdownSemanticSearch();
   await ctx.app.close();
   await fsp.rm(ctx.notesDir, { recursive: true, force: true });
+  if (ctx.semanticIndexFile) {
+    await Promise.all([
+      fsp.rm(ctx.semanticIndexFile, { force: true }),
+      fsp.rm(`${ctx.semanticIndexFile}-wal`, { force: true }),
+      fsp.rm(`${ctx.semanticIndexFile}-shm`, { force: true }),
+    ]);
+  }
+  for (const key of SEMANTIC_ENV_KEYS) {
+    const value = ctx.envSnapshot[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 }
 
 /** Typed fetch helper that includes auth cookie, CSRF token, and JSON content-type. */

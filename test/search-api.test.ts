@@ -21,6 +21,7 @@ describe('GET /search', () => {
     expect(results.length).toBeGreaterThanOrEqual(1);
     const match = results.find((r: { id: string }) => r.id === '202401151433');
     expect(match).toBeDefined();
+    expect(match.matchType).toBeUndefined();
   });
 
   test('tag search filters by tag', async () => {

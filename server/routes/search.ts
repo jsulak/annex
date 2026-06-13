@@ -10,7 +10,7 @@ export async function registerSearch(app: FastifyInstance) {
     }
 
     const maxResults = limit ? Math.min(parseInt(limit, 10) || 50, 200) : 50;
-    const results = search(q.trim(), maxResults);
+    const results = await search(q.trim(), maxResults);
     return results;
   });
 }

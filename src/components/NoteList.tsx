@@ -239,6 +239,8 @@ export default function NoteList() {
       : 'Pull to refresh';
 
   const isEmpty = !loading && !searchLoading && displayNotes.length === 0;
+  const isSemanticOnly = (note: NoteIndex | SearchResult): note is SearchResult =>
+    'matchType' in note && note.matchType === 'semantic';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -332,18 +334,57 @@ export default function NoteList() {
               }}
             />
           ) : (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {note.filename.replace(/\.md$/i, '')}
-            </span>
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '13px',
+                    color: 'var(--text-primary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {note.filename.replace(/\.md$/i, '')}
+                </span>
+                {isSemanticOnly(note) && (
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '10px',
+                      lineHeight: 1,
+                      color: 'var(--text-accent)',
+                      border: '1px solid color-mix(in srgb, var(--text-accent) 50%, transparent)',
+                      borderRadius: '4px',
+                      padding: '2px 4px',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0,
+                    }}
+                  >
+                    Related
+                  </span>
+                )}
+              </div>
+              {isSemanticOnly(note) && note.semanticSnippet && (
+                <div
+                  style={{
+                    marginTop: '4px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    lineHeight: 1.35,
+                    color: 'var(--text-secondary)',
+                    overflow: 'hidden',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}
+                >
+                  {note.semanticSnippet}
+                </div>
+              )}
+            </>
           )}
         </div>
       ))}

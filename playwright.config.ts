@@ -67,7 +67,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: `NOTES_DIR="${tmpDir}" SESSION_SECRET=e2etestsecrete2etestsecrete2etest PORT=${BACKEND_PORT} npx tsx server/index.ts`,
+      command: `NOTES_DIR="${tmpDir}" SESSION_SECRET=e2etestsecrete2etestsecrete2etest PORT=${BACKEND_PORT} SEMANTIC_EMBEDDING_PROVIDER=fake SEMANTIC_INDEX_FILE="${path.join(tmpDir, '..', `${path.basename(tmpDir)}-semantic.sqlite`)}" SEMANTIC_MIN_SCORE=0.5 npx tsx server/index.ts`,
       port: BACKEND_PORT,
       reuseExistingServer: false,
       timeout: 15_000,

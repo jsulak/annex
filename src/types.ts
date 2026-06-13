@@ -24,4 +24,7 @@ export interface NoteDetail extends NoteIndex {
 export interface SearchResult extends NoteIndex {
   titleMatches: Array<[number, number]>;    // [offset, length]
   snippetMatches: Array<[number, number]>;  // [offset, length]
+  matchType?: 'exact' | 'hybrid' | 'semantic';
+  semanticScore?: number;
+  semanticSnippet?: string;
 }

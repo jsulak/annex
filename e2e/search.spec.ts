@@ -76,6 +76,26 @@ test.describe('Search — filtering and results', () => {
 
     await expect(page.locator('#note-list').getByText('202401151433 Second Note')).toBeVisible({ timeout: 5_000 });
   });
+
+  test('natural-language search shows related semantic result with excerpt', async ({ page, request }) => {
+    const id = nextId();
+    await request.put(`/api/v1/notes/${id}`, {
+      data: {
+        body: '# Coaching Notes\n\nQuiet mentorship sessions help apprentices learn judgment.',
+      },
+    });
+
+    await page.goto('/');
+    await expect(page.locator('#search-input')).toBeVisible({ timeout: 10_000 });
+    await page.locator('#search-input').fill('where do I talk about learning or mentorship?');
+
+    const result = page.locator('#note-list > div').filter({ hasText: `${id} Untitled` });
+    await expect(result).toBeVisible({ timeout: 5_000 });
+    await expect(result.getByText('Related')).toBeVisible();
+    await expect(result.getByText('mentorship sessions')).toBeVisible();
+
+    await request.delete(`/api/v1/notes/${id}`);
+  });
 });
 
 test.describe('Search — clearing and navigation', () => {

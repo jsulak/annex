@@ -18,7 +18,7 @@ import { registerConfig } from './routes/config.js';
 import { registerSync } from './routes/sync.js';
 import { registerAssets } from './routes/assets.js';
 import { registerMedia } from './routes/media.js';
-import { buildIndex, getIndexSize } from './lib/searchIndex.js';
+import { buildIndex, getIndexSize, initializeSemanticSearch, shutdownSemanticSearch } from './lib/searchIndex.js';
 import { startWatcher, stopWatcher } from './lib/watcher.js';
 import { createBackup, pruneBackups } from './lib/backup.js';
 import { FileSessionStore } from './lib/sessionStore.js';
@@ -134,6 +134,9 @@ async function start() {
   // Build search index
   const indexed = await buildIndex(resolvedNotesDir);
   console.log(`Search index built: ${indexed} notes indexed`);
+  if (initializeSemanticSearch()) {
+    console.log('Semantic search enabled; background index build started');
+  }
 
   // Start file watcher (after index is built)
   await startWatcher(resolvedNotesDir);
@@ -275,6 +278,7 @@ async function start() {
     } catch (err) {
       console.error('Error stopping watcher:', err);
     }
+    shutdownSemanticSearch();
     console.log('Shutdown complete');
     process.exit(0);
   };
