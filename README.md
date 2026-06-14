@@ -117,7 +117,7 @@ make provision
 make deploy
 ```
 
-Required environment variables: `DIGITALOCEAN_TOKEN`, `TF_VAR_ssh_key_name`, `SESSION_SECRET`. Copy `deploy.sh.example` to `deploy.sh` and fill in values.
+Required environment variables: `DIGITALOCEAN_TOKEN`, `TF_VAR_ssh_key_name`, `SESSION_SECRET`, `OPENAI_API_KEY`. Copy `deploy.sh.example` to `deploy.sh` and fill in values.
 
 ## Project Structure
 

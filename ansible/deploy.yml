@@ -25,11 +25,18 @@
 
 - name: Deploy to VPS
   hosts: all
+  gather_facts: false
   tasks:
     - name: Validate session_secret is set
       ansible.builtin.assert:
         that: session_secret | default('') | length > 0
         fail_msg: "session_secret is required. Pass via: -e session_secret=..."
+        quiet: true
+
+    - name: Validate openai_api_key is set
+      ansible.builtin.assert:
+        that: openai_api_key | default('') | length > 0
+        fail_msg: "openai_api_key is required. Pass via: -e openai_api_key=..."
         quiet: true
 
     - name: Sync app files to remote
@@ -60,11 +67,30 @@
         dest: "{{ app_dir }}/ecosystem.config.cjs"
         mode: "0600"
 
+    - name: Stop app before dependency install
+      ansible.builtin.command:
+        cmd: pm2 stop annex
+      register: stop_app
+      changed_when: stop_app.rc == 0
+      failed_when: false
+
+    - name: Wait for SSH before dependency install
+      ansible.builtin.wait_for_connection:
+        timeout: 120
+        sleep: 5
+
+    - name: Check native build toolchain
+      ansible.builtin.command:
+        cmd: bash -lc 'node --version && npm --version && python3 --version && make --version && g++ --version'
+      changed_when: false
+
     - name: Install production dependencies
-      community.general.npm:
-        path: "{{ app_dir }}"
-        ci: true
-        production: true
+      ansible.builtin.command:
+        cmd: npm ci --omit=dev
+        chdir: "{{ app_dir }}"
+      changed_when: true
+      environment:
+        npm_config_jobs: "1"
 
     - name: Start or restart app
       ansible.builtin.command:

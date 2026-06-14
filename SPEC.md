@@ -532,6 +532,7 @@ export TF_VAR_ssh_key_name="your-ssh-key-name"   # Must match both DO and ~/.ssh
 
 # Required for deploy only
 export SESSION_SECRET="$(openssl rand -hex 32)"
+export OPENAI_API_KEY="sk-..."
 ```
 
 A `deploy.sh.example` is provided as a template — copy to `deploy.sh` (gitignored) and fill in values.
@@ -565,7 +566,7 @@ After provisioning, root login is disabled. All subsequent access is via the `an
 **Deploy** (`make deploy`) runs as `annex` and:
 - Builds the app locally (`npm ci` + `npm run build`)
 - Rsyncs the built app to the VPS (excluding `node_modules`, `.git`, `src`, `test`, `e2e`, `ansible`, `terraform`)
-- Templates the PM2 ecosystem config with the `SESSION_SECRET`
+- Templates the PM2 ecosystem config with the `SESSION_SECRET` and `OPENAI_API_KEY`
 - Installs production dependencies
 - Restarts via PM2 and waits for the health check to pass
 
@@ -575,6 +576,7 @@ After provisioning, root login is disabled. All subsequent access is via the `an
 NOTES_DIR=/home/annex/notes    # Set by PM2 ecosystem config
 PORT=3000                           # Default: 3000
 SESSION_SECRET=<64 random chars>   # Passed via -e at deploy time
+OPENAI_API_KEY=<OpenAI API key>     # Passed via -e at deploy time
 SESSION_MAX_AGE_DAYS=30            # Optional, default 30
 NODE_ENV=production
 ```

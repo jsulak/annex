@@ -28,6 +28,45 @@
           - g++
         state: present
 
+    - name: Check for swap file
+      ansible.builtin.stat:
+        path: /swapfile
+      register: swapfile
+
+    - name: Create swap file
+      ansible.builtin.command:
+        cmd: fallocate -l 1G /swapfile
+      when: not swapfile.stat.exists
+      changed_when: true
+
+    - name: Secure swap file
+      ansible.builtin.file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+      when: not swapfile.stat.exists
+
+    - name: Format swap file
+      ansible.builtin.command:
+        cmd: mkswap /swapfile
+      when: not swapfile.stat.exists
+      changed_when: true
+
+    - name: Enable swap file
+      ansible.builtin.command:
+        cmd: swapon /swapfile
+      when: not swapfile.stat.exists
+      changed_when: true
+
+    - name: Persist swap file
+      ansible.builtin.mount:
+        name: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        state: present
+
     # ── Automatic security updates ───────────────────────────
     - name: Enable unattended-upgrades
       ansible.builtin.copy:

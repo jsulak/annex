@@ -50,8 +50,9 @@ endif
 deploy:
 	@test -n "$(IP)" || (echo "Error: No droplet IP. Run 'make infra-apply' first." && exit 1)
 	@test -n "$(SESSION_SECRET)" || (echo "Error: SESSION_SECRET env var is required." && exit 1)
+	@test -n "$(OPENAI_API_KEY)" || (echo "Error: OPENAI_API_KEY env var is required." && exit 1)
 	@test -n "$(TF_VAR_ssh_key_name)" || (echo "Error: TF_VAR_ssh_key_name env var is required." && exit 1)
-	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) -e "session_secret=$(SESSION_SECRET)"
+	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml -i '$(IP),' -u $(APP_USER) --private-key=~/.ssh/$(TF_VAR_ssh_key_name) -e "session_secret=$(SESSION_SECRET)" -e "openai_api_key=$(OPENAI_API_KEY)"
 
 # Quick code push — build locally, rsync, restart. Skips npm ci and PM2 config templating.
 push:

@@ -10,6 +10,7 @@ module.exports = {
         PORT: '{{ app_port }}',
         NOTES_DIR: '{{ notes_dir }}',
         SESSION_SECRET: '{{ session_secret }}',
+        OPENAI_API_KEY: '{{ openai_api_key }}',
 {% if syncthing_api_key.stdout is defined and syncthing_api_key.stdout %}
         SYNCTHING_API_KEY: '{{ syncthing_api_key.stdout }}',
 {% endif %}
