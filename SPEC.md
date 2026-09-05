@@ -53,13 +53,13 @@ The server is a single Node.js process. It serves the compiled React frontend as
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| Frontend framework | React 18 + Vite | Fast DX, component model |
+| Frontend framework | React 19 + Vite | Fast DX, component model |
 | Markdown editor | CodeMirror 6 | Extensible, performant, Markdown syntax highlighting |
 | Markdown rendering | `marked` + `DOMPurify` | Lightweight and safe |
 | Full-text search | Flexsearch (in-memory, server-side) | Sub-millisecond search; updated incrementally on file change |
 | Styling | Tailwind CSS | Utility-first; single fixed theme |
 | State management | Zustand | Minimal boilerplate |
-| Backend runtime | Node.js 20 LTS | Stable, available on all Linux distros |
+| Backend runtime | Node.js 24 LTS | Stable, available on all Linux distros |
 | Backend framework | Fastify | Fast, low overhead, good TypeScript support |
 | Authentication | Session-based (HTTP-only cookie) + bcrypt | Simple, secure, no OAuth dependency |
 | File watching | `chokidar` | Cross-platform, reliable fs watcher |
@@ -447,7 +447,7 @@ Development runs entirely on your Mac. No VPS, no Syncthing needed until deploym
 ### 17.1 Local Dev Setup
 
 ```bash
-# Prerequisites: Node.js 20+, npm
+# Prerequisites: Node.js 24+, npm
 git clone https://github.com/you/annex
 cd annex
 npm install
@@ -552,7 +552,7 @@ make deploy
 
 **Provision** (`make provision`) runs once as `root` on a fresh droplet and:
 - Creates the `annex` user with SSH key access
-- Installs Node.js 20, PM2, Caddy
+- Installs Node.js 24, PM2, Caddy
 - **Hardens SSH**: disables root login, password auth, challenge-response; restricts access to `annex` user only
 - **Installs fail2ban**: SSH brute-force protection (5 attempts / 10min → 1h ban)
 - **Enables UFW**: default deny inbound, allow SSH/80/443 (defense-in-depth alongside DO cloud firewall)
@@ -762,8 +762,8 @@ annex/
 Single-user self-hosted Zettelkasten web app. Full spec is in SPEC.md — read it before starting.
 
 ## Stack
-- Backend: Node.js 20 + Fastify + TypeScript (run with tsx)
-- Frontend: React 18 + Vite + CodeMirror 6 + Tailwind + Zustand
+- Backend: Node.js 24 + Fastify + TypeScript (run with tsx)
+- Frontend: React 19 + Vite + CodeMirror 6 + Tailwind + Zustand
 - Notes: plain .md files on the filesystem — no database
 - Auth: bcrypt password + HTTP-only session cookie
 - Sync: Syncthing (VPS ↔ Mac) — not needed for local dev

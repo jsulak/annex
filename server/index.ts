@@ -196,13 +196,13 @@ async function start() {
     await app.register(fastifyStatic, {
       root: distPath,
       wildcard: false,
-      setHeaders: (res, filePath) => {
+      setHeaders: (reply, filePath) => {
         if (filePath.includes('/assets/')) {
           // Hashed Vite assets — cache for 1 year
-          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          reply.header('Cache-Control', 'public, max-age=31536000, immutable');
         } else {
           // index.html and other entry points — always revalidate
-          res.setHeader('Cache-Control', 'no-cache');
+          reply.header('Cache-Control', 'no-cache');
         }
       },
     });

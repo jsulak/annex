@@ -30,8 +30,8 @@ This is the software that I want to use; it is probably not the software that yo
 
 | Layer | Technology |
 |-------|------------|
-| Backend | Node.js 20, Fastify, TypeScript (tsx) |
-| Frontend | React 18, Vite, CodeMirror 6, Tailwind CSS, Zustand |
+| Backend | Node.js 24, Fastify, TypeScript (tsx) |
+| Frontend | React 19, Vite, CodeMirror 6, Tailwind CSS, Zustand |
 | Auth | bcrypt + HTTP-only session cookie |
 | Search | Flexsearch (server-side, in-memory) |
 | Sync | Syncthing (VPS ↔ Mac) |
@@ -41,8 +41,12 @@ This is the software that I want to use; it is probably not the software that yo
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - npm
+
+The `.nvmrc` selects Node.js 24 LTS (`nvm install && nvm use`). Provisioning
+also targets Node.js 24; upgrade existing servers before deploying this version.
+TypeScript stays on 6.0 until typescript-eslint supports TypeScript 7.
 
 ### Setup
 

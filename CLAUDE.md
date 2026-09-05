@@ -3,8 +3,8 @@
 Single-user self-hosted Zettelkasten web app — a clone of The Archive (zettelkasten.de). Full spec is in SPEC.md — read it before starting any work.
 
 ## Stack
-- Backend: Node.js 20 + Fastify + TypeScript (run with `tsx`)
-- Frontend: React 18 + Vite + CodeMirror 6 + Tailwind CSS + Zustand
+- Backend: Node.js 24 + Fastify + TypeScript (run with `tsx`)
+- Frontend: React 19 + Vite + CodeMirror 6 + Tailwind CSS + Zustand
 - Notes: plain `.md` files on the filesystem — no database
 - Auth: bcrypt password + HTTP-only session cookie
 - Sync: Syncthing (VPS ↔ Mac) — not needed for local dev
@@ -87,6 +87,8 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 [ Update this section as features are completed ]
+
+- [x] Updated dependencies and transitive security fixes (September 2026), aligned development/provisioning with Node.js 24 LTS, migrated Fastify static headers and Vite types. TypeScript held at 6.0 for typescript-eslint compatibility. Verified build, lint, 269 API tests, production static-serving smoke, and browser suite (246/247 initially; dialog focus timing corrected and all 6 dialog/setup tests passed on rerun); npm audit reports zero vulnerabilities.
 
 - [x] Server scaffold (Fastify, NOTES_DIR env, static serving, health check)
 - [x] Auth (setup CLI, login route, bcrypt, session cookie, route protection)

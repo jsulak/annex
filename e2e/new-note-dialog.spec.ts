@@ -37,6 +37,8 @@ test.describe('New note dialog', () => {
   test('Escape closes the dialog without creating', async ({ page }) => {
     await page.locator('button[title="New note"]').click();
     await expect(page.locator('input[placeholder="Note title..."]')).toBeVisible();
+    // The dialog focuses its input on the next animation frame.
+    await expect(page.locator('input[placeholder="Note title..."]')).toBeFocused();
     const notesBefore = await page.locator('#note-list > div').count();
     await page.keyboard.press('Escape');
     await expect(page.locator('input[placeholder="Note title..."]')).not.toBeVisible();

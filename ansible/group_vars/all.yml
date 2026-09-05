@@ -2,7 +2,7 @@ app_user: annex
 app_dir: /opt/annex
 notes_dir: /home/annex/notes
 app_port: 3000
-node_version: "20"
+node_version: "24"
 
 # Set to a domain name when DNS is configured, or leave empty to serve on bare IP
 domain: ""
