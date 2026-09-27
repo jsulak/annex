@@ -87,7 +87,7 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 
-- [x] Fixed editor cursor jumps during background sync: incremental same-note updates preserve selection and undo history; refresh responses recheck current edits and ignore stale results. Conflicts cancel queued saves, and edits made during a save remain pending. Includes 12 browser regressions. Verified 51 production-branch Playwright checks, lint, production build, and npm audit (zero vulnerabilities). Prepared independently of the unreleased Book Capture branch for deployment to the existing production app.
+- [x] Fixed editor cursor jumps during background sync: incremental same-note updates preserve selection and undo history; refresh responses recheck current edits and ignore stale results. Conflicts cancel queued saves, and edits made during a save remain pending. Includes 12 browser regressions. Verified 51 production-branch Playwright checks, lint, production build, and npm audit (zero vulnerabilities). Released as `d6ed21f` on `main` and deployed to https://annex.boxkitemachine.net independently of the unreleased Book Capture branch. Verified all 116 uploaded files, public page/bundle hashes, healthy service after restart, and browser login rendering without JavaScript errors; previous entry page and assets retained for rollback.
 
 [ Update this section as features are completed ]
 
