@@ -86,6 +86,9 @@ Work through these in order. Do not move to the next task until the current one 
 
 
 ## Current Status
+
+- [x] Fixed editor cursor jumps during background sync: incremental same-note updates preserve selection and undo history; refresh responses recheck current edits and ignore stale results. Conflicts cancel queued saves, and edits made during a save remain pending. Includes 12 browser regressions. Verified 51 production-branch Playwright checks, lint, production build, and npm audit (zero vulnerabilities). Prepared independently of the unreleased Book Capture branch for deployment to the existing production app.
+
 [ Update this section as features are completed ]
 
 - [x] Updated dependencies and transitive security fixes (September 2026), aligned development/provisioning with Node.js 24 LTS, migrated Fastify static headers and Vite types. TypeScript held at 6.0 for typescript-eslint compatibility. Verified build, lint, 269 API tests, production static-serving smoke, and browser suite (246/247 initially; dialog focus timing corrected and all 6 dialog/setup tests passed on rerun); npm audit reports zero vulnerabilities.

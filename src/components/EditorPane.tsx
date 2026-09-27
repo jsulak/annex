@@ -316,7 +316,8 @@ export default function EditorPane() {
             }}
           >
             <CodeMirrorEditor
-              doc={liveContent}
+              key={selectedNote.id}
+              doc={selectedNote.id === loadedNoteIdRef.current ? liveContent : selectedNote.body}
               onUpdate={handleChange}
               saveNow={saveNow}
               onNavigate={handleNavigate}

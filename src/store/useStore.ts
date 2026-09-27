@@ -14,6 +14,8 @@ export interface Tab {
   searchResults: SearchResult[] | null;
 }
 
+let selectedNoteReloadRequest = 0;
+
 let _tabSeq = 0;
 function generateTabId(): string {
   return `tab-${Date.now()}-${++_tabSeq}`;
@@ -347,21 +349,31 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   reloadSelectedNote: async (id: string, etag?: string) => {
-    const { selectedId, hasPendingEdits, selectedNote } = get();
-    if (selectedId !== id) return;
+    const { selectedId, selectedNote } = get();
+    if (selectedId !== id || selectedNote?.id !== id) return;
     // If the incoming etag matches what we already have, there is nothing to do.
     // This prevents false conflict dialogs when a session receives the echo of
     // its own just-saved note (PUT handler broadcasts; watcher is suppressed).
     if (etag && selectedNote?.etag === etag) return;
+    const request = ++selectedNoteReloadRequest;
     try {
       const res = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
       if (res.ok) {
         const note: NoteDetail = await res.json();
-        if (hasPendingEdits) {
-          const { pendingBody } = get();
-          get().setConflict({
+        const current = get();
+        // Navigation and newer reloads supersede this request.
+        if (current.selectedId !== id || request !== selectedNoteReloadRequest) return;
+        if (current.selectedNote !== selectedNote) {
+          // A save or a return to this note invalidated the snapshot. Read
+          // again so we neither roll back that save nor miss a newer sync.
+          await current.reloadSelectedNote(id);
+          return;
+        }
+        if (note.etag === current.selectedNote.etag) return;
+        if (current.hasPendingEdits) {
+          current.setConflict({
             noteId: id,
-            localBody: pendingBody ?? selectedNote?.body ?? '',
+            localBody: current.pendingBody ?? current.selectedNote.body,
             serverBody: note.body,
             serverEtag: note.etag,
           });

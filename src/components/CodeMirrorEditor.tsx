@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
   createExtensions,
@@ -178,7 +178,8 @@ export default function CodeMirrorEditor({
     }
   }, [focusRequest]);
 
-  // Replace document when doc prop changes (note switch)
+  // The parent remounts us on note switches. Apply same-note updates as changes
+  // so CodeMirror can map the selection and undo history through the edit.
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -186,26 +187,27 @@ export default function CodeMirrorEditor({
     const current = view.state.doc.toString();
     if (current === doc) return;
 
-    isSettingDocRef.current = true;
-
-    // Reset undo history by replacing the state with fresh extensions
-    const newState = EditorState.create({
-      doc,
-      extensions: [
-        ...createExtensions(buildCallbacks(), buildDisplayOptions()),
-        saveKeymap(stableSaveNow),
-      ],
-    });
-    view.setState(newState);
-
-    isSettingDocRef.current = false;
-
-    // Re-apply search highlights after state replacement
-    const terms = parseSearchTerms(searchQueryRef.current ?? '');
-    if (terms.length > 0) {
-      view.dispatch({ effects: setSearchTermsEffect.of(terms) });
+    // Keep unchanged text outside the replacement, including text containing
+    // the cursor. Replacing the entire document would map most positions to 0.
+    let from = 0;
+    while (from < current.length && from < doc.length && current[from] === doc[from]) from++;
+    let to = current.length;
+    let insertTo = doc.length;
+    while (to > from && insertTo > from && current[to - 1] === doc[insertTo - 1]) {
+      to--;
+      insertTo--;
     }
-  }, [doc, buildCallbacks, buildDisplayOptions, stableSaveNow]);
+
+    isSettingDocRef.current = true;
+    try {
+      view.dispatch({
+        changes: { from, to, insert: doc.slice(from, insertTo) },
+        annotations: [Transaction.addToHistory.of(false), Transaction.remote.of(true)],
+      });
+    } finally {
+      isSettingDocRef.current = false;
+    }
+  }, [doc]);
 
   return (
     <div

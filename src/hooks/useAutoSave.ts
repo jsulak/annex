@@ -18,6 +18,7 @@ export function useAutoSave(
   saveStatus: SaveStatus;
 } {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const conflict = useStore((s) => s.conflict);
 
   const pendingContentRef = useRef<string | null>(null);
   const currentNoteIdRef = useRef<string | null>(noteId);
@@ -25,6 +26,8 @@ export function useAutoSave(
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSavingRef = useRef(false);
+  const saveWaitersRef = useRef<Array<() => void>>([]);
+  const failedRef = useRef(false);
 
   // Keep etag ref in sync
   currentEtagRef.current = etag;
@@ -44,18 +47,35 @@ export function useAutoSave(
   }, []);
 
   const doSave = useCallback(async (id: string, content: string, currentEtag: string | null) => {
-    if (isSavingRef.current) return;
+    if (isSavingRef.current) {
+      await new Promise<void>(resolve => saveWaitersRef.current.push(resolve));
+      return;
+    }
 
-    // Don't save notes that are being deleted or already deleted
     const state = useStore.getState();
+    if (state.conflict?.noteId === id) {
+      pendingContentRef.current = null;
+      setSaveStatus('conflict');
+      return;
+    }
+    // Don't save notes that are being deleted or already deleted.
     if (state.pendingDeleteId === id || !state.notes.some((n) => n.id === id)) {
       pendingContentRef.current = null;
       return;
     }
 
     isSavingRef.current = true;
+    failedRef.current = false;
     setSaveStatus('saving');
     clearSavedTimer();
+
+    // A sync conflict or its resolution owns the buffer now. Check after each
+    // response body is read too, since edits/resolution can happen during it.
+    const wasSuperseded = () => {
+      const latest = useStore.getState();
+      return latest.conflict?.noteId === id
+        || (latest.selectedId === id && latest.selectedNote !== state.selectedNote);
+    };
 
     try {
       const headers: Record<string, string> = {};
@@ -69,9 +89,12 @@ export function useAutoSave(
         body: JSON.stringify({ body: content }),
       });
 
+      if (wasSuperseded()) return;
+
       if (res.ok) {
         const data = await res.json();
-        useStore.getState().updateEtag(data.etag);
+        if (wasSuperseded()) return;
+        if (useStore.getState().selectedId === id) useStore.getState().updateEtag(data.etag);
         useStore.getState().updateNoteInList(
           id,
           data.modifiedAt,
@@ -81,47 +104,61 @@ export function useAutoSave(
           data.links,
           data.references,
         );
-        useStore.getState().setHasPendingEdits(false);
-        pendingContentRef.current = null;
-        setSaveStatus('saved');
+        if (currentNoteIdRef.current !== id) return;
+        currentEtagRef.current = data.etag;
+        // Typing while a request is in flight must remain pending.
+        if (pendingContentRef.current === content) {
+          useStore.getState().setHasPendingEdits(false);
+          pendingContentRef.current = null;
+          setSaveStatus('saved');
+        } else {
+          setSaveStatus('dirty');
+        }
 
         savedTimerRef.current = setTimeout(() => {
           setSaveStatus((prev) => (prev === 'saved' ? 'idle' : prev));
         }, SAVED_DISPLAY_DURATION);
       } else if (res.status === 409) {
+        failedRef.current = true;
         // Conflict — fetch current server version and surface dialog
         try {
           const serverRes = await apiFetch(`/api/v1/notes/${encodeURIComponent(id)}`);
           if (serverRes.ok) {
             const serverNote = await serverRes.json();
+            if (wasSuperseded()) return;
             useStore.getState().setConflict({
               noteId: id,
-              localBody: content,
+              localBody: currentNoteIdRef.current === id ? pendingContentRef.current ?? content : content,
               serverBody: serverNote.body,
               serverEtag: serverNote.etag,
             });
+            // The conflict dialog now owns this text and the user's resolution.
+            if (currentNoteIdRef.current === id) pendingContentRef.current = null;
           }
         } catch {
           // If we can't fetch server version, fall through to generic error
         }
-        pendingContentRef.current = null;
         setSaveStatus('conflict');
       } else {
+        failedRef.current = true;
         console.error('Save failed:', res.status, res.statusText);
         setSaveStatus('error');
       }
     } catch (err) {
+      failedRef.current = true;
       console.error('Save error:', err);
       setSaveStatus('error');
     } finally {
       isSavingRef.current = false;
+      for (const resolve of saveWaitersRef.current.splice(0)) resolve();
     }
   }, [clearSavedTimer]);
 
   const flushSave = useCallback(async (id: string | null) => {
     clearDebounce();
-    if (id && pendingContentRef.current !== null) {
+    while (id && pendingContentRef.current !== null) {
       await doSave(id, pendingContentRef.current, currentEtagRef.current);
+      if (failedRef.current || currentNoteIdRef.current !== id) break;
     }
   }, [clearDebounce, doSave]);
 
@@ -136,13 +173,33 @@ export function useAutoSave(
     clearSavedTimer();
     clearDebounce();
 
+    const currentConflict = useStore.getState().conflict;
+    if (currentConflict?.noteId === currentNoteIdRef.current) {
+      useStore.getState().setConflict({ ...currentConflict, localBody: content });
+      return;
+    }
+
     debounceTimerRef.current = setTimeout(() => {
       const id = currentNoteIdRef.current;
       if (id && pendingContentRef.current !== null) {
-        void doSave(id, pendingContentRef.current, currentEtagRef.current);
+        void flushSave(id);
       }
     }, Math.max(200, autoSaveDelay));
-  }, [autoSaveDelay, clearDebounce, clearSavedTimer, doSave]);
+  }, [autoSaveDelay, clearDebounce, clearSavedTimer, flushSave]);
+
+  // The conflict dialog owns pending text until the user chooses a version.
+  // Cancel the queued save so accepting the server version cannot save the
+  // discarded local text afterward using the newly accepted etag.
+  useEffect(() => {
+    if (conflict?.noteId === noteId) {
+      clearDebounce();
+      clearSavedTimer();
+      pendingContentRef.current = null;
+      setSaveStatus('conflict');
+    } else {
+      setSaveStatus(prev => prev === 'conflict' ? 'idle' : prev);
+    }
+  }, [conflict, noteId, clearDebounce, clearSavedTimer]);
 
   // Flush on note switch
   useEffect(() => {
