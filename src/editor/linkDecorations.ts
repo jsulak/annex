@@ -96,6 +96,10 @@ function buildDecorations(view: EditorView): DecorationSet {
 
         if (openBracket === -1 || closeBracket === -1 || !urlText) return;
 
+        // View-plugin replacements must stay on one line. Keep multiline
+        // destinations and titles visible so they remain editable.
+        if (state.doc.lineAt(closeBracket).to < linkTo) return;
+
         // Hide the opening [ : replace it with nothing
         decos.push({
           from: openBracket,

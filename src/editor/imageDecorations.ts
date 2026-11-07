@@ -44,8 +44,8 @@ class ImageWidget extends WidgetType {
   }
 }
 
-// Matches ![alt text](path/to/image.ext) — alt and path may contain spaces
-const imageRe = /!\[([^\]]*)\]\(([^)]+)\)/g;
+// Keep replacements on one line. Alt text and paths may contain spaces.
+const imageRe = /!\[([^\]\r\n]*)\]\(([^)\r\n]+)\)/g;
 
 function buildDecorations(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
