@@ -7,6 +7,7 @@ type Callback = (err?: Error | null) => void;
 // Minimal session shape — cookie.expires may be a Date or ISO string after JSON round-trip
 interface StoredSession {
   cookie: { expires?: Date | string | null; [k: string]: unknown };
+  __fastifySessionMetadata?: { generation?: string };
   [key: string]: unknown;
 }
 
@@ -66,6 +67,18 @@ export class FileSessionStore {
     this.sessions.set(sessionId, session);
     this.pruneExpired();
     this.persist().then(() => callback(null), (err: unknown) => callback(err instanceof Error ? err : new Error(String(err))));
+  }
+
+  compareAndSet(sessionId: string, expectedGeneration: string, session: StoredSession, callback: Callback): void {
+    const stored = this.sessions.get(sessionId);
+    // Compare and replace synchronously, before any persistence yields control.
+    // Legacy sessions without metadata use their store key as the generation.
+    if (!stored || this.isExpired(stored, Date.now()) ||
+        (stored.__fastifySessionMetadata?.generation ?? sessionId) !== expectedGeneration) {
+      callback(Object.assign(new Error('The session does not exist or has changed'), { code: 'ENOENT' }));
+      return;
+    }
+    this.set(sessionId, session, callback);
   }
 
   destroy(sessionId: string, callback: Callback): void {
