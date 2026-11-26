@@ -378,6 +378,14 @@
         state: started
 
     # ── PM2 startup ──────────────────────────────────────────
+    - name: Keep PM2 process state private
+      ansible.builtin.file:
+        path: "/home/{{ app_user }}/.pm2"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0700'
+
     - name: Check if PM2 startup is configured
       ansible.builtin.stat:
         path: "/etc/systemd/system/pm2-{{ app_user }}.service"
