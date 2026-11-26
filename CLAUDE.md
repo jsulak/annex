@@ -87,6 +87,36 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 
+- [x] Consolidated production work and documentation on `main` (November 26, 2026): deployed dependency/session-store and editor fixes were already on main. Added the security audit history and integration/deployment plans while preserving production release notes. Unfinished Book Capture remains on `feature/book-capture`; this workspace now uses main.
+
+- [x] Audited live VPS security against Terraform and Ansible (November 25, 2026): confirmed public encoded-path authentication bypass using a missing note ID, unrestricted app-user sudo, stale runtime/running kernel, anonymous session growth, missing log rotation, same-disk backups, local Caddy-admin access, and cloud/IaC sync-port drift. Documented evidence, working controls, limitations, and ordered remediation in `SECURITY_AUDIT.md`. No notes, packages, firewall rules, or service configurations changed; remediation remains pending.
+
+- [x] Verified replacement DigitalOcean credential and completed read-only Terraform plan (November 25, 2026): SSH-key read succeeded with HTTP 200. Live plan reports 0 additions, 1 in-place firewall change, and 0 destroys; proposed changes add inbound TCP 22000 and UDP 21027 for Syncthing, retaining ICMP. Droplet has no proposed changes. Nothing applied.
+
+- [x] Diagnosed DigitalOcean credential failure (November 25, 2026): no environment or auto-loaded Terraform variable overrides were present. The literal token in ignored `deploy.sh` was rejected directly with HTTP 401 by account, SSH-key, droplet, and firewall read endpoints. Credential values were withheld; replacement is required before cloud drift verification.
+
+- [x] Reviewed Terraform currency (November 25, 2026): formatting and validation pass; scripts still match the saved Debian 12/512 MiB droplet shape, but saved firewall state lacks the declared Syncthing inbound rules. Live drift plan failed with DigitalOcean HTTP 401, so actual cloud drift is unverified. Local Terraform is 1.5.7/provider 2.79.0; provider lockfile is ignored. No infrastructure changes applied.
+
+- [x] Remediated dependency advisories (November 25, 2026): updated compatible dependency resolutions and patched minimums; full and production-only npm audits both report zero vulnerabilities after clean installation. Adapted the file session store to @fastify/session's conditional-save contract with stale/revoked-session regression coverage. Verified 300 API tests, all 277 Playwright checks, lint, and production build on Node 24.22.3. No VPS deployment performed. See `SECURITY_AUDIT.md` for details.
+
+- [x] Audited checkout dependencies (November 25, 2026): fresh npm scans found 23 affected entries overall (2 critical, 5 high) and 9 production entries (0 critical, 2 high). Documented package paths, exposure conditions, update targets, extraneous installed packages, and the local Node version mismatch in `SECURITY_AUDIT.md`. Dependency upgrades and VPS rescanning were not performed.
+
+- [x] Completed live VPS version and update audit (November 7, 2026). Recorded the deployed dependency and global tool advisory scans, Debian LTS and kernel reboot status, third-party update gaps, and effective SSH, firewall, and sudo settings in `SECURITY_AUDIT.md`. The comparison initially exhausted VPS memory and triggered an automatic Annex restart, after which health was verified and analysis moved locally.
+
+- [x] Released the focused multiline Markdown editor crash fix from `main` as `ada7b5d` (November 7, 2026). Verified 13 production-branch browser checks, lint, build, deployed public asset hashes, and the affected note loading in Safari with an empty JavaScript console.
+
+- [x] Audited the application and deployment configuration (November 2026). Reproduced unauthenticated note reads and writes through local HTTPS Caddy, confirmed deployment would copy the private wrapper, and identified a legacy sudo grant that can persist on upgraded hosts. Recorded findings, checks, and remediation in `SECURITY_AUDIT.md`. Live VPS follow-up is recorded in the November 7 section of `SECURITY_AUDIT.md`. Security remediation remains pending.
+
+- [x] Planned browser access to Codex on the Annex VPS (October 2026): `docs/workbench-deployment-plan.md` uses the existing Terraform, Ansible provisioning, Makefile, and `deploy.sh` methodology for the workbench/auth subdomains, Caddy and Authelia MFA, ttyd and tmux persistence, shared note permissions, resource checks, acceptance gates, and rollback. Live VPS inspection, implementation, and deployment remain pending.
+
+- [x] Planned ChatGPT web access to the VPS note store (September 2026): `docs/chatgpt-annex-integration-plan.md` starts with a no-code ChatGPT Work browser pilot, then defines MCP tools, OAuth, revision checks, deployment, and acceptance gates if a dedicated integration is needed. Pilot and implementation remain pending.
+
+- [x] Moved the standalone PDF library documentation to `~/src/pdf-library/` (September 2026), with updated document links. The directory contains `SPEC.md`, `IMPLEMENTATION_PLAN.md`, and `EVALUATION.md`; Git repository initialization, implementation, and deployment have not started.
+
+- [x] Specified the standalone PDF library (September 2026): `../pdf-library/SPEC.md` defines requirements, portable identity/metadata, revision-consistent viewing, annotation saves, Syncthing conflicts, APIs, operations, and acceptance criteria. `../pdf-library/IMPLEMENTATION_PLAN.md` sequences feasibility gates through a real-library pilot for a separate repository. Implementation and deployment have not started.
+
+- [x] Evaluated standalone PDF library options (September 2026): documented PdfDing versus a custom PDF.js application in `../pdf-library/EVALUATION.md`. Verified source-level metadata/page-link support, consumption-folder limitations, and a client save-failure indication issue. Recommended a standalone application for an Annex-style Syncthing folder workflow; no PDF library implementation or deployment yet.
+
 - [x] Deployed dependency security release `91619c6` (November 25, 2026) from the production branch, excluding unfinished Book Capture. Verified 270 API tests, 264 browser checks, lint, build, deployed manifest/HTML/asset hashes, internal and public HTTPS health, normal unauthenticated API rejection, and zero production npm advisories. Previous app and dependencies retained at `/home/annex/.annex-deploy/rollback-91619c6`. Node remains 24.20.0; infrastructure hardening was outside this release.
 
 - [x] Prepared focused dependency security release (November 25, 2026): ported dependency updates and session-store conditional-save support from `420e2aa`, excluding unfinished Book Capture code and its sharp dependency. Clean install and npm audit report zero vulnerabilities; 270 API tests, lint, and production build pass on Node 24.22.3. Deployment verification will be recorded after release.
