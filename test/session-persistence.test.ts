@@ -11,7 +11,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import csrf from '@fastify/csrf-protection';
 import { FileSessionStore } from '../server/lib/sessionStore.js';
-import { registerAuth } from '../server/auth.js';
+import { registerAuth, sessionPersistence } from '../server/auth.js';
 
 const PASSWORD = 'testpassword';
 const PASSWORD_HASH = '$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy';
@@ -24,6 +24,7 @@ async function buildTestApp(store: FileSessionStore): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
+    ...sessionPersistence,
     secret: SESSION_SECRET,
     store,
     cookieName: 'annex_session',
@@ -36,18 +37,12 @@ async function buildTestApp(store: FileSessionStore): Promise<FastifyInstance> {
     },
   });
   await app.register(csrf, { sessionPlugin: '@fastify/session' });
-  const CSRF_MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
-  app.addHook('preValidation', (request, reply, done) => {
-    if (!CSRF_MUTATING.has(request.method)) return done();
-    if (request.url === '/api/v1/auth/login') return done();
-    return app.csrfProtection(request, reply, done);
-  });
   await registerAuth(app, notesDir, {
     loginDelayMs: 0,
     rateLimitMax: 100,
     invalidateAllSessions: () => store.destroyAll(),
   });
-  app.get('/api/v1/health', async () => ({ status: 'ok' }));
+  app.get('/api/v1/health', { config: { publicApi: true } }, async () => ({ status: 'ok' }));
   app.get('/api/v1/auth/csrf-token', async (_request, reply) => {
     const token = await reply.generateCsrf();
     return reply.send({ token });

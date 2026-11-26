@@ -6,7 +6,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
 import csrf from '@fastify/csrf-protection';
-import { registerAuth } from '../server/auth.js';
+import { registerAuth, sessionPersistence } from '../server/auth.js';
 import { registerNotes } from '../server/routes/notes.js';
 import { registerSearch } from '../server/routes/search.js';
 import { registerTags } from '../server/routes/tags.js';
@@ -57,6 +57,7 @@ export async function startTestServer(): Promise<TestContext> {
 
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
+    ...sessionPersistence,
     secret: 'testsecrettestsecrettestsecrettest',
     cookieName: 'annex_session',
     cookie: {
@@ -70,12 +71,6 @@ export async function startTestServer(): Promise<TestContext> {
 
   // CSRF protection (matches production setup)
   await app.register(csrf, { sessionPlugin: '@fastify/session' });
-  const CSRF_MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
-  app.addHook('preValidation', (request, reply, done) => {
-    if (!CSRF_MUTATING.has(request.method)) return done();
-    if (request.url === '/api/v1/auth/login') return done();
-    return app.csrfProtection(request, reply, done);
-  });
 
   await registerAuth(app, notesDir, { loginDelayMs: 0, rateLimitMax: 100 });
   await registerNotes(app, notesDir);
@@ -87,7 +82,7 @@ export async function startTestServer(): Promise<TestContext> {
   await registerAssets(app, notesDir);
   await registerMedia(app, notesDir);
 
-  app.get('/api/v1/health', async () => ({ status: 'ok' }));
+  app.get('/api/v1/health', { config: { publicApi: true } }, async () => ({ status: 'ok' }));
   app.get('/api/v1/auth/csrf-token', async (_request, reply) => {
     const token = await reply.generateCsrf();
     return reply.send({ token });

@@ -6,6 +6,9 @@ import { readConfig, writeConfig } from './lib/config.js';
 const BCRYPT_ROUNDS = 12;
 const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+const CSRF_MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+
+export const sessionPersistence = { saveUninitialized: false, rolling: false };
 
 interface LockoutEntry {
   failures: number;
@@ -13,6 +16,10 @@ interface LockoutEntry {
 }
 
 declare module 'fastify' {
+  interface FastifyContextConfig {
+    publicApi?: boolean;
+  }
+
   interface Session {
     authenticated?: boolean;
   }
@@ -75,6 +82,7 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
   // Login route
   app.post('/api/v1/auth/login', {
     config: {
+      publicApi: true,
       rateLimit: {
         max: rateLimitMax,
         timeWindow: 15 * 60 * 1000,
@@ -91,7 +99,7 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
       });
     }
 
-    const { password } = request.body as { password: string };
+    const { password } = (request.body ?? {}) as { password?: unknown };
 
     if (!password || typeof password !== 'string') {
       return reply.status(400).send({ error: 'Password is required' });
@@ -112,6 +120,7 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
     }
 
     resetLockout(ip);
+    if (request.session.isPersisted()) await request.session.regenerate();
     request.session.set('authenticated', true);
     return { ok: true };
   });
@@ -183,21 +192,16 @@ export async function registerAuth(app: FastifyInstance, _notesDir: string, opts
     return { ok: true };
   });
 
-  // Protect all /api/v1/* routes except login and health
+  // Authorize using the route selected by Fastify, with explicit public exceptions.
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
-    // Skip non-API routes
-    if (!request.url.startsWith('/api/v1/')) {
-      return;
-    }
-
-    // Public routes
-    const publicRoutes = ['/api/v1/auth/login', '/api/v1/health'];
-    if (publicRoutes.some((route) => request.url.startsWith(route))) {
-      return;
-    }
-
+    if (!request.routeOptions.url?.startsWith('/api/') || request.routeOptions.config.publicApi) return;
     if (!request.session.get('authenticated')) {
       return reply.status(401).send({ error: 'Unauthorized' });
     }
+  });
+
+  app.addHook('preValidation', (request, reply, done) => {
+    if (!CSRF_MUTATING.has(request.method) || request.routeOptions.config.publicApi) return done();
+    return app.csrfProtection(request, reply, done);
   });
 }

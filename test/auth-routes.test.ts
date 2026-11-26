@@ -25,6 +25,7 @@ describe('login', () => {
   test('wrong password returns 401', async () => {
     const res = await http.unauthed('POST', '/api/v1/auth/login', { password: 'wrongpassword' });
     expect(res.status).toBe(401);
+    expect(res.headers.has('set-cookie')).toBe(false);
   });
 
   test('missing password returns 400', async () => {
@@ -76,6 +77,13 @@ describe('health check', () => {
     const res = await http.unauthed('GET', '/api/v1/health');
     expect(res.ok).toBe(true);
     expect(await res.json()).toEqual({ status: 'ok' });
+    expect(res.headers.has('set-cookie')).toBe(false);
+  });
+
+  test('anonymous requests cannot obtain a CSRF token or a session', async () => {
+    const res = await http.unauthed('GET', '/api/v1/auth/csrf-token');
+    expect(res.status).toBe(401);
+    expect(res.headers.has('set-cookie')).toBe(false);
   });
 });
 

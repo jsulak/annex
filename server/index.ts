@@ -9,7 +9,7 @@ import fastifySession from '@fastify/session';
 import helmet from '@fastify/helmet';
 import compress from '@fastify/compress';
 import csrf from '@fastify/csrf-protection';
-import { registerAuth } from './auth.js';
+import { registerAuth, sessionPersistence } from './auth.js';
 import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
 import { registerTags } from './routes/tags.js';
@@ -79,6 +79,7 @@ async function start() {
   await sessionStore.init();
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
+    ...sessionPersistence,
     secret: SESSION_SECRET,
     store: sessionStore as unknown as import('@fastify/session').SessionStore,
     cookieName: 'annex_session',
@@ -93,14 +94,6 @@ async function start() {
 
   // CSRF protection (registered after session, before routes)
   await app.register(csrf, { sessionPlugin: '@fastify/session' });
-
-  // Apply CSRF validation to all mutating routes except login
-  const CSRF_MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
-  app.addHook('preValidation', (request, reply, done) => {
-    if (!CSRF_MUTATING.has(request.method)) return done();
-    if (request.url === '/api/v1/auth/login') return done();
-    return app.csrfProtection(request, reply, done);
-  });
 
   // Auth routes and middleware
   await registerAuth(app, resolvedNotesDir, {
@@ -145,7 +138,8 @@ async function start() {
   });
 
   // Health check (public — safe for external uptime monitors)
-  app.get('/api/v1/health', async (_request, reply) => {
+  app.get('/api/v1/health', { config: { publicApi: true } }, async (request, reply) => {
+    if (!request.session.get('authenticated')) return reply.send({ status: 'ok' });
     const mem = process.memoryUsage();
 
     // Disk usage of notes directory
