@@ -1,30 +1,20 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { readConfig, writeConfig, Config } from '../lib/config.js';
+import { readSettings, updateSettings, type Settings } from '../lib/config.js';
 
 export async function registerConfig(app: FastifyInstance) {
-  // GET /api/v1/config — returns settings (omits passwordHash)
+  // GET /api/v1/config — returns settings
   app.get('/api/v1/config', async (_request: FastifyRequest, _reply: FastifyReply) => {
-    const config = await readConfig();
-    return {
-      settings: config.settings,
-    };
+    return { settings: await readSettings() };
   });
 
   // PUT /api/v1/config — partial update of settings
   app.put('/api/v1/config', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { settings?: Partial<Config['settings']> };
+    const { settings } = (request.body ?? {}) as { settings?: Partial<Settings> };
 
-    if (!body.settings || typeof body.settings !== 'object') {
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
       return reply.status(400).send({ error: 'settings object is required' });
     }
 
-    const config = await readConfig();
-    config.settings = { ...config.settings, ...body.settings };
-    await writeConfig(config);
-    const updated = await readConfig();
-
-    return {
-      settings: updated.settings,
-    };
+    return { settings: await updateSettings(settings) };
   });
 }

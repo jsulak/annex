@@ -9,7 +9,7 @@ import fastifySession from '@fastify/session';
 import helmet from '@fastify/helmet';
 import compress from '@fastify/compress';
 import csrf from '@fastify/csrf-protection';
-import { registerAuth, sessionPersistence } from './auth.js';
+import { registerAuth, sessionCookieOptions, sessionPersistence } from './auth.js';
 import { registerNotes } from './routes/notes.js';
 import { registerSearch } from './routes/search.js';
 import { registerTags } from './routes/tags.js';
@@ -46,18 +46,19 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const BACKUP_KEEP = parseInt(process.env.BACKUP_KEEP || '7', 10);
 const BACKUP_INTERVAL_MS = parseInt(process.env.BACKUP_INTERVAL_HOURS || '24', 10) * 60 * 60 * 1000;
 
-// Resolve and validate NOTES_DIR
-const resolvedNotesDir = path.resolve(NOTES_DIR);
+const backupDirectory = IS_PROD ? path.join(os.homedir(), '.annex', 'backups') : undefined;
 
 const SESSIONS_FILE = process.env.SESSIONS_FILE ||
   path.join(os.homedir(), '.annex', 'sessions.json');
 
 async function start() {
-  // Ensure NOTES_DIR exists
+  // Resolve a configured alias once so file operations share the same notes root.
+  let resolvedNotesDir: string;
   try {
-    await fs.access(resolvedNotesDir);
+    resolvedNotesDir = await fs.realpath(NOTES_DIR);
+    if (!(await fs.stat(resolvedNotesDir)).isDirectory()) throw new Error('Not a directory');
   } catch {
-    console.error(`NOTES_DIR does not exist: ${resolvedNotesDir}`);
+    console.error(`NOTES_DIR is not an accessible directory: ${NOTES_DIR}`);
     process.exit(1);
   }
 
@@ -80,16 +81,9 @@ async function start() {
   await app.register(fastifyCookie);
   await app.register(fastifySession, {
     ...sessionPersistence,
+    ...sessionCookieOptions(IS_PROD, SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000),
     secret: SESSION_SECRET,
     store: sessionStore as unknown as import('@fastify/session').SessionStore,
-    cookieName: 'annex_session',
-    cookie: {
-      maxAge: SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      secure: IS_PROD,
-      sameSite: 'strict',
-      path: '/',
-    },
   });
 
   // CSRF protection (registered after session, before routes)
@@ -148,7 +142,7 @@ async function start() {
       const files = await fs.readdir(resolvedNotesDir);
       for (const f of files) {
         try {
-          const stat = await fs.stat(path.join(resolvedNotesDir, f));
+          const stat = await fs.lstat(path.join(resolvedNotesDir, f));
           if (stat.isFile()) notesDirBytes += stat.size;
         } catch { /* skip */ }
       }
@@ -218,8 +212,8 @@ async function start() {
   // Automated backups — run after a 1-minute warm-up, then every BACKUP_INTERVAL_MS
   async function runBackup() {
     try {
-      const dest = await createBackup(resolvedNotesDir);
-      await pruneBackups(resolvedNotesDir, BACKUP_KEEP);
+      const dest = await createBackup(resolvedNotesDir, backupDirectory);
+      await pruneBackups(resolvedNotesDir, BACKUP_KEEP, backupDirectory);
       console.log(`Backup created: ${path.basename(dest)}`);
     } catch (err) {
       console.error('Backup failed:', err);

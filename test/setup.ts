@@ -15,6 +15,7 @@ import { registerConfig } from '../server/routes/config.js';
 import { registerSync } from '../server/routes/sync.js';
 import { registerAssets } from '../server/routes/assets.js';
 import { registerMedia } from '../server/routes/media.js';
+import { writePasswordHash } from '../server/lib/config.js';
 import { buildIndex } from '../server/lib/searchIndex.js';
 import { startWatcher, stopWatcher } from '../server/lib/watcher.js';
 
@@ -31,10 +32,14 @@ export interface TestContext {
 
 export async function startTestServer(): Promise<TestContext> {
   // Create temp dir with seed notes
-  const notesDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-test-'));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-test-'));
+  const notesDir = path.join(tmpDir, 'notes');
+  fs.mkdirSync(notesDir);
+  process.env.NOTES_DIR = notesDir;
+  process.env.CONFIG_DIR = path.join(tmpDir, 'private');
+  await writePasswordHash('$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy');
 
   const config = {
-    passwordHash: '$2b$12$6qQXBZMeoIFGTDf3NSkX5.q1kH62vYIfaxpmiFv3oHJMdslONT0wy',
     settings: {
       autoSaveDelay: 500,
       fontSize: 13,
@@ -49,9 +54,6 @@ export async function startTestServer(): Promise<TestContext> {
   for (const file of fs.readdirSync(SEED_DIR)) {
     fs.copyFileSync(path.join(SEED_DIR, file), path.join(notesDir, file));
   }
-
-  // Set env for config.ts (it reads NOTES_DIR)
-  process.env.NOTES_DIR = notesDir;
 
   const app = Fastify({ logger: false });
 
@@ -114,7 +116,7 @@ export async function startTestServer(): Promise<TestContext> {
 export async function stopTestServer(ctx: TestContext): Promise<void> {
   await stopWatcher();
   await ctx.app.close();
-  await fsp.rm(ctx.notesDir, { recursive: true, force: true });
+  await fsp.rm(path.dirname(ctx.notesDir), { recursive: true, force: true });
 }
 
 /** Typed fetch helper that includes auth cookie, CSRF token, and JSON content-type. */

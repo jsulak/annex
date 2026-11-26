@@ -24,6 +24,7 @@ interface StoredSession {
  */
 export class FileSessionStore {
   private sessions = new Map<string, StoredSession>();
+  private pendingWrite = Promise.resolve();
   private readonly filePath: string;
 
   constructor(filePath: string) {
@@ -105,20 +106,26 @@ export class FileSessionStore {
   }
 
   private async persist(): Promise<void> {
-    const data: Record<string, unknown> = {};
-    for (const [id, session] of this.sessions) {
-      data[id] = session;
-    }
-    const json = JSON.stringify(data, null, 2);
+    const json = JSON.stringify(Object.fromEntries(this.sessions), null, 2);
+    // Commit snapshots in mutation order so an older save cannot overwrite a revocation.
+    const write = this.pendingWrite.then(() => this.writeSnapshot(json));
+    this.pendingWrite = write.catch(() => {});
+    await write;
+  }
 
+  private async writeSnapshot(json: string): Promise<void> {
     // Ensure parent directory exists with 0700 permissions
     const dir = path.dirname(this.filePath);
     await fs.mkdir(dir, { recursive: true, mode: 0o700 });
 
-    // Atomic write: temp file → rename, then lock down permissions
-    const tmp = this.filePath + '.tmp.' + crypto.randomBytes(4).toString('hex');
-    await fs.writeFile(tmp, json, { encoding: 'utf-8', mode: 0o600 });
-    await fs.rename(tmp, this.filePath);
-    await fs.chmod(this.filePath, 0o600);
+    const tmp = this.filePath + '.tmp.' + crypto.randomUUID();
+    try {
+      await fs.writeFile(tmp, json, { encoding: 'utf-8', mode: 0o600, flush: true });
+      await fs.chmod(tmp, 0o600);
+      await fs.rename(tmp, this.filePath);
+    } catch (err) {
+      await fs.rm(tmp, { force: true }).catch(() => {});
+      throw err;
+    }
   }
 }

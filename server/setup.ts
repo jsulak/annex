@@ -1,6 +1,6 @@
 import readline from 'node:readline';
 import bcrypt from 'bcrypt';
-import { readConfig, writeConfig } from './lib/config.js';
+import { migrateLegacyAuth, readPasswordHash, writePasswordHash } from './lib/config.js';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -53,14 +53,15 @@ async function main() {
   console.log('Annex Setup');
   console.log('===============\n');
 
-  if (!process.env.NOTES_DIR) {
-    console.log('Note: NOTES_DIR not set. Config will be stored at ~/.annex/config.json');
-    console.log('Set NOTES_DIR to store config alongside your notes as _annex.json\n');
+  const args = process.argv.slice(2);
+  if (args.length === 1 && args[0] === '--migrate-auth') {
+    await migrateLegacyAuth();
+    console.log('Private authentication state is ready.');
+    return;
   }
+  if (args.length) throw new Error('Usage: npm run setup -- [--migrate-auth]');
 
-  const config = await readConfig();
-
-  if (config.passwordHash) {
+  if (await readPasswordHash()) {
     const overwrite = await prompt('A password is already set. Overwrite? (y/N): ');
     if (overwrite.toLowerCase() !== 'y') {
       console.log('Aborted.');
@@ -80,8 +81,7 @@ async function main() {
     process.exit(1);
   }
 
-  config.passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  await writeConfig(config);
+  await writePasswordHash(await bcrypt.hash(password, BCRYPT_ROUNDS));
 
   console.log('\nPassword set successfully.');
   console.log('Start the server with: npm run dev:server');

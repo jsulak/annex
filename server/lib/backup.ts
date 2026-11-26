@@ -9,13 +9,14 @@ export const BACKUP_DIR_NAME = '_backups';
 const DEFAULT_KEEP = 7;
 
 /**
- * Create a timestamped tar.gz snapshot of notesDir, stored in notesDir/_backups/.
- * Excludes _backups/ and _trash/ from the archive.
+ * Create a timestamped tar.gz snapshot of notesDir. Production uses a directory
+ * outside the synced tree. Legacy archives, trash, and old settings files
+ * that could still contain an authentication hash are always excluded.
  * Returns the path to the created archive.
  */
-export async function createBackup(notesDir: string): Promise<string> {
-  const backupDir = path.join(notesDir, BACKUP_DIR_NAME);
-  await fs.mkdir(backupDir, { recursive: true });
+export async function createBackup(notesDir: string, backupDir = path.join(notesDir, BACKUP_DIR_NAME)): Promise<string> {
+  await fs.mkdir(backupDir, { recursive: true, mode: 0o700 });
+  if (!(await fs.lstat(backupDir)).isDirectory()) throw new Error('Backup destination must be a directory');
 
   const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 17); // YYYYMMDDHHmmssSSS
   const filename = `backup-${timestamp}.tar.gz`;
@@ -28,6 +29,8 @@ export async function createBackup(notesDir: string): Promise<string> {
     '-czf', dest,
     `--exclude=${baseName}/${BACKUP_DIR_NAME}`,
     `--exclude=${baseName}/_trash`,
+    `--exclude=${baseName}/_annex.json`,
+    `--exclude=${baseName}/_annex.sync-conflict-*.json`,
     '-C', parentDir,
     baseName,
   ]);
@@ -38,14 +41,15 @@ export async function createBackup(notesDir: string): Promise<string> {
 /**
  * Delete the oldest backup archives, retaining only the `keep` most recent.
  */
-export async function pruneBackups(notesDir: string, keep: number = DEFAULT_KEEP): Promise<void> {
-  const backupDir = path.join(notesDir, BACKUP_DIR_NAME);
+export async function pruneBackups(notesDir: string, keep: number = DEFAULT_KEEP, backupDir = path.join(notesDir, BACKUP_DIR_NAME)): Promise<void> {
 
   let entries: string[];
   try {
+    if (!(await fs.lstat(backupDir)).isDirectory()) throw new Error('Backup destination must be a directory');
     entries = await fs.readdir(backupDir);
-  } catch {
-    return; // _backups/ doesn't exist yet — nothing to prune
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
   }
 
   const backups = entries

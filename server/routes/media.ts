@@ -1,12 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import multipart from '@fastify/multipart';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { writeMediaFile } from '../lib/fileStore.js';
 
 const ALLOWED_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
-/** Sanitize an uploaded filename and prepend a timestamp to avoid collisions. */
+/** Sanitize an uploaded filename and make it distinct across concurrent uploads. */
 function buildSafeFilename(originalName: string): string {
   const ext = path.extname(originalName).toLowerCase();
   if (!ALLOWED_EXTENSIONS.has(ext)) {
@@ -16,7 +17,7 @@ function buildSafeFilename(originalName: string): string {
     .normalize('NFC')
     .replace(/[^A-Za-z0-9._-]/g, '_')
     .slice(0, 64);
-  return `${Date.now()}_${base || 'image'}${ext}`;
+  return `${Date.now()}_${randomUUID()}_${base || 'image'}${ext}`;
 }
 
 export async function registerMedia(app: FastifyInstance, notesDir: string) {

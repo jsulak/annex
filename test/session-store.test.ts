@@ -1,8 +1,49 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { FileSessionStore } from '../server/lib/sessionStore.js';
+
+test.each(['one session', 'all sessions'])('persists revocation of %s after pending saves', async (scope) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-session-order-'));
+  const file = path.join(dir, 'sessions.json');
+  const store = new FileSessionStore(file);
+  const rename = fs.rename;
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  const renameSpy = vi.spyOn(fs, 'rename').mockImplementationOnce(async (from, to) => {
+    entered.resolve();
+    await resume.promise;
+    return rename(from, to);
+  });
+  const mkdirSpy = vi.spyOn(fs, 'mkdir');
+  const save = new Promise<void>((resolve, reject) => {
+    store.set('id', { cookie: {}, authenticated: true }, err => err ? reject(err) : resolve());
+  });
+
+  try {
+    await entered.promise;
+    const revoke = scope === 'all sessions'
+      ? store.destroyAll()
+      : new Promise<void>((resolve, reject) => store.destroy('id', err => err ? reject(err) : resolve()));
+    const writesWhileSaveIsPending = mkdirSpy.mock.calls.length;
+    resume.resolve();
+    await Promise.all([save, revoke]);
+
+    expect(writesWhileSaveIsPending).toBe(1);
+    const reloaded = new FileSessionStore(file);
+    await reloaded.init();
+    reloaded.get('id', (err, session) => {
+      expect(err).toBeNull();
+      expect(session).toBeNull();
+    });
+  } finally {
+    resume.resolve();
+    renameSpy.mockRestore();
+    mkdirSpy.mockRestore();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
 
 test('conditional saves preserve generations and cannot resurrect revoked sessions after restart', async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-session-cas-'));

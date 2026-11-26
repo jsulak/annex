@@ -68,7 +68,7 @@ export async function registerSync(app: FastifyInstance, apiKey: string, notesDi
         body: JSON.stringify([{
           deviceID: body.deviceID,
           name: body.name || 'Mac',
-          autoAcceptFolders: true,
+          autoAcceptFolders: false,
         }]),
       });
       if (!deviceRes.ok) {

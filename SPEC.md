@@ -171,7 +171,6 @@ A file `_annex.json` is maintained in the notes directory (or at `~/.annex/confi
 
 ```json
 {
-  "passwordHash": "<bcrypt hash>",
   "settings": {
     "autoSaveDelay": 1000,
     "fontSize": 13,
@@ -183,7 +182,7 @@ A file `_annex.json` is maintained in the notes directory (or at `~/.annex/confi
 }
 ```
 
-This file is filtered out of the note list (ignored during indexing). Syncthing syncs it like any other file, so settings are shared across devices automatically.
+The note index excludes this file. Syncthing shares these settings across devices.
 
 ---
 
@@ -191,19 +190,19 @@ This file is filtered out of the note list (ignored during indexing). Syncthing 
 
 ### 8.1 Model
 
-Single-user password authentication. No OAuth, no magic links, no email. On first run, the server prompts via a CLI setup script to set a password. The hashed password is stored in the config file using `bcrypt` (cost factor 12).
+Annex uses single-user password authentication. Set the password with `npm run setup`. The CLI stores the bcrypt hash (cost factor 12) in `~/.annex/auth.json` with mode `0600`. Set `CONFIG_DIR` to use a different private directory. Keep it outside `NOTES_DIR` and use a distinct directory for each instance. Existing installations can migrate the hash and strip it from synced settings with `npm run setup -- --migrate-auth` during a maintenance window.
 
 ### 8.2 Login Flow
 
 1. Unauthenticated requests to any route redirect to `/login`.
 2. The login page presents a single password field and a submit button.
-3. On correct password, the server creates a signed HTTP-only session cookie (`@fastify/session`).
-4. Session duration: 30 days (configurable via `SESSION_MAX_AGE_DAYS`). Cookie flags: `SameSite=Strict; Secure; HttpOnly`.
+3. On correct password, the server creates or regenerates a signed session cookie with `@fastify/session`.
+4. The session lasts 30 days by default. Set `SESSION_MAX_AGE_DAYS` to change the duration. The production cookie `__Host-annex_session` uses `SameSite=Strict`, `Secure`, and `HttpOnly` with path `/`.
 5. On incorrect password: 1-second artificial delay, generic "Incorrect password" message. After 5 consecutive failures from the same IP, that IP is blocked for 15 minutes.
 
 ### 8.3 Session Persistence
 
-Sessions survive server restarts via a JSON file at `~/.annex/sessions.json`. On restart, valid non-expired sessions are reloaded.
+Sessions survive server restarts via a JSON file at `~/.annex/sessions.json`. On restart, valid non-expired sessions are reloaded. Production backup archives are written to `~/.annex/backups` outside the notes share.
 
 ### 8.4 Password Change
 
@@ -411,8 +410,7 @@ interface NoteDetail extends NoteIndex {
   etag: string;          // mtime hex, for conflict detection
 }
 
-interface Config {
-  passwordHash: string;
+interface SyncedConfig {
   settings: {
     autoSaveDelay: number;
     fontSize: number;

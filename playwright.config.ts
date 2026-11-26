@@ -11,9 +11,15 @@ const MARKER_FILE = path.join(import.meta.dirname, 'e2e', 'fixtures', '.test-not
 // Create temp dir eagerly so webServer commands can use it.
 // Teardown is handled by globalTeardown.
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'annex-e2e-'));
+const notesDir = path.join(tmpDir, 'notes');
+const configDir = path.join(tmpDir, 'private');
+fs.mkdirSync(notesDir);
+fs.mkdirSync(configDir, { mode: 0o700 });
+fs.writeFileSync(path.join(configDir, 'auth.json'), JSON.stringify({
+  passwordHash: '$2b$12$6vrCipuW.vXwiXO1GaUcS.nahAIDZIkpG/aE/YL0zy8QPmvKjOpiO',
+}), { mode: 0o600 });
 
 const config = {
-  passwordHash: '$2b$12$6vrCipuW.vXwiXO1GaUcS.nahAIDZIkpG/aE/YL0zy8QPmvKjOpiO',
   savedSearches: [],
   settings: {
     autoSaveDelay: 500,
@@ -27,10 +33,10 @@ const config = {
     hideMarkdownMarkup: false,
   },
 };
-fs.writeFileSync(path.join(tmpDir, '_annex.json'), JSON.stringify(config, null, 2));
+fs.writeFileSync(path.join(notesDir, '_annex.json'), JSON.stringify(config, null, 2));
 
 for (const file of fs.readdirSync(SEED_DIR)) {
-  fs.copyFileSync(path.join(SEED_DIR, file), path.join(tmpDir, file));
+  fs.copyFileSync(path.join(SEED_DIR, file), path.join(notesDir, file));
 }
 
 // Write marker for teardown
@@ -67,7 +73,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: `NOTES_DIR="${tmpDir}" SESSION_SECRET=e2etestsecrete2etestsecrete2etest PORT=${BACKEND_PORT} npx tsx server/index.ts`,
+      command: `NOTES_DIR="${notesDir}" CONFIG_DIR="${configDir}" SESSIONS_FILE="${path.join(configDir, 'sessions.json')}" SESSION_SECRET=e2etestsecrete2etestsecrete2etest PORT=${BACKEND_PORT} npx tsx server/index.ts`,
       port: BACKEND_PORT,
       reuseExistingServer: false,
       timeout: 15_000,

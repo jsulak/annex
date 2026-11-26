@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import path from 'node:path';
-import fs from 'node:fs/promises';
+import { readMediaFile } from '../lib/fileStore.js';
 
 const MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
@@ -16,38 +16,26 @@ const MIME_TYPES: Record<string, string> = {
 
 export async function registerAssets(app: FastifyInstance, notesDir: string) {
   app.get('/api/v1/assets/*', async (request: FastifyRequest, reply: FastifyReply) => {
-    const rawPath = (request.params as { '*': string })['*'];
+    // Fastify already decodes wildcard parameters.
+    const assetPath = (request.params as { '*': string })['*'];
 
-    if (!rawPath) {
+    if (!assetPath) {
       return reply.status(400).send({ error: 'Path required' });
     }
 
-    // Decode URL-encoded characters (e.g. %20 → space) so filenames with spaces resolve correctly
-    let decodedPath: string;
-    try {
-      decodedPath = decodeURIComponent(rawPath);
-    } catch {
-      return reply.status(400).send({ error: 'Invalid path' });
-    }
-
-    // Resolve and validate path stays within NOTES_DIR/media only.
-    const resolved = path.resolve(notesDir, decodedPath);
-    const mediaDir = path.resolve(notesDir, 'media');
-    const mediaPrefix = mediaDir.endsWith(path.sep) ? mediaDir : mediaDir + path.sep;
-    if (!resolved.startsWith(mediaPrefix)) {
-      return reply.status(403).send({ error: 'Forbidden' });
+    const ext = path.extname(path.resolve(notesDir, assetPath)).toLowerCase();
+    if (ext === '.svg') {
+      return reply.status(403).send({ error: 'File type not allowed' });
     }
 
     try {
-      const ext = path.extname(rawPath).toLowerCase();
-      if (ext === '.svg') {
-        return reply.status(403).send({ error: 'File type not allowed' });
-      }
-
-      const data = await fs.readFile(resolved);
+      const data = await readMediaFile(notesDir, assetPath);
       const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
       return reply.type(contentType).send(data);
-    } catch {
+    } catch (error) {
+      if ((error as { statusCode?: number }).statusCode === 403) {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
       return reply.status(404).send({ error: 'Asset not found' });
     }
   });

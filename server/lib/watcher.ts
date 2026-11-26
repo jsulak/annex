@@ -1,9 +1,8 @@
 import path from 'node:path';
-import fs from 'node:fs/promises';
 import chokidar, { type FSWatcher } from 'chokidar';
-import { parseNote } from './noteParser.js';
+import { isNoteFilename, readNoteSnapshot } from './fileStore.js';
+import { filenameToId, parseNote } from './noteParser.js';
 import { addToIndex, removeFromIndex } from './searchIndex.js';
-import { filenameToId } from './noteParser.js';
 
 // --- SSE client management ---
 
@@ -79,43 +78,44 @@ function debounceFile(filePath: string, fn: () => void): void {
 
 let watcher: FSWatcher | null = null;
 
-function isValidNoteFile(filename: string): boolean {
-  if (filename.startsWith('_') || filename.startsWith('.')) return false;
-  if (filename.includes('.syncthing')) return false;
-  return filename.endsWith('.md');
-}
-
 export async function startWatcher(notesDir: string): Promise<void> {
-  watcher = chokidar.watch(notesDir, {
+  const root = path.resolve(notesDir);
+  const currentWatcher = chokidar.watch(root, {
     ignoreInitial: true,
-    ignored: /(^|[/\\])(_annex|_trash|_backups|\.syncthing)/,
+    ignored: [
+      /(^|[/\\])(_annex|_trash|_backups|\.syncthing)/,
+      (_filePath, stats) => stats !== undefined && !stats.isFile() && !stats.isDirectory(),
+    ],
     depth: 0,
+    followSymlinks: false,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
   });
+  watcher = currentWatcher;
+
+  function isWatchedNote(filePath: string): boolean {
+    return path.dirname(path.resolve(filePath)) === root && isNoteFilename(path.basename(filePath));
+  }
 
   async function handleAddOrChange(filePath: string, event: 'note:created' | 'note:modified') {
-    if (isSuppressed(filePath)) return;
+    if (isSuppressed(filePath) || !isWatchedNote(filePath)) return;
 
     const filename = path.basename(filePath);
-    if (!isValidNoteFile(filename)) return;
-
     try {
-      const body = await fs.readFile(filePath, 'utf-8');
-      const stat = await fs.stat(filePath);
-      const note = parseNote(filename, body, stat.mtime);
-      const etag = Math.round(stat.mtimeMs).toString(16);
+      const { body, mtime, mtimeMs } = await readNoteSnapshot(root, filename);
+      const note = parseNote(filename, body, mtime);
+      const etag = Math.round(mtimeMs).toString(16);
       addToIndex({ ...note, body });
       broadcast(event, { id: note.id, filename: note.filename, etag });
-    } catch {
-      // File may have been deleted between event and read
+    } catch (error) {
+      const { code, statusCode } = error as NodeJS.ErrnoException & { statusCode?: number };
+      if (code === 'ENOENT' || code === 'ELOOP' || statusCode === 403) handleUnlink(filePath);
     }
   }
 
   function handleUnlink(filePath: string) {
-    if (isSuppressed(filePath)) return;
+    if (isSuppressed(filePath) || !isWatchedNote(filePath)) return;
 
     const filename = path.basename(filePath);
-    if (!isValidNoteFile(filename)) return;
 
     const id = filenameToId(filename);
     if (!id) return;
@@ -124,19 +124,21 @@ export async function startWatcher(notesDir: string): Promise<void> {
     broadcast('note:deleted', { id, filename });
   }
 
-  watcher.on('add', (filePath: string) => {
+  currentWatcher.on('add', (filePath: string) => {
     debounceFile(filePath, () => void handleAddOrChange(filePath, 'note:created'));
   });
 
-  watcher.on('change', (filePath: string) => {
+  currentWatcher.on('change', (filePath: string) => {
     debounceFile(filePath, () => void handleAddOrChange(filePath, 'note:modified'));
   });
 
-  watcher.on('unlink', (filePath: string) => {
+  currentWatcher.on('unlink', (filePath: string) => {
     // No debounce on unlink — file is already gone
     handleUnlink(filePath);
   });
+  currentWatcher.on('error', (error) => console.error('File watcher error:', error));
 
+  await new Promise<void>((resolve) => currentWatcher.once('ready', resolve));
   console.log('File watcher started');
 }
 

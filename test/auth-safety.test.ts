@@ -87,11 +87,8 @@ describe('config API safety', () => {
   test('old config files receive hideMarkdownMarkup default', async () => {
     const configPath = path.join(ctx.notesDir, '_annex.json');
     const original = await fs.readFile(configPath, 'utf-8');
-    const originalConfig = JSON.parse(original);
-
     try {
       await fs.writeFile(configPath, JSON.stringify({
-        passwordHash: originalConfig.passwordHash,
         savedSearches: [],
         settings: {
           autoSaveDelay: 750,
@@ -129,14 +126,16 @@ describe('config API safety', () => {
   });
 
   test('PUT /config does not allow overwriting passwordHash', async () => {
+    const authPath = path.join(path.dirname(ctx.notesDir), 'private', 'auth.json');
+    const originalAuth = await fs.readFile(authPath, 'utf8');
     const res = await http.put('/api/v1/config', {
-      settings: { fontSize: 14 },
+      settings: { fontSize: 14, passwordHash: 'injected-hash' },
       passwordHash: 'injected-hash',
     });
     expect(res.ok).toBe(true);
 
-    const authCheck = await http.get('/api/v1/auth/check');
-    expect(authCheck.ok).toBe(true);
+    expect(await fs.readFile(authPath, 'utf8')).toBe(originalAuth);
+    expect(await fs.readFile(path.join(ctx.notesDir, '_annex.json'), 'utf8')).not.toContain('passwordHash');
 
     // Restore
     await http.put('/api/v1/config', { settings: { fontSize: 13 } });

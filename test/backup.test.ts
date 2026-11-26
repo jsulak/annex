@@ -2,6 +2,8 @@ import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createBackup, pruneBackups } from '../server/lib/backup.js';
 
 let tmpDir: string;
@@ -30,6 +32,26 @@ describe('createBackup', () => {
     await createBackup(tmpDir);
     const stat = await fs.stat(path.join(tmpDir, '_backups'));
     expect(stat.isDirectory()).toBe(true);
+  });
+
+  test('production-style backups and pruning use the private destination', async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), 'annex-private-backup-'));
+    try {
+      await fs.writeFile(path.join(tmpDir, '_annex.json'), '{}');
+      await fs.writeFile(path.join(tmpDir, '_annex.sync-conflict-20261126.json'), '{}');
+      const legacy = await createBackup(tmpDir);
+      const current = await createBackup(tmpDir, privateDir);
+      expect(path.dirname(current)).toBe(privateDir);
+      expect((await fs.stat(current)).size).toBeGreaterThan(0);
+      const { stdout } = await promisify(execFile)('tar', ['-tzf', current]);
+      expect(stdout).toContain('Note A.md');
+      expect(stdout).not.toContain('_annex');
+      await pruneBackups(tmpDir, 0, privateDir);
+      expect(await fs.readdir(privateDir)).toEqual([]);
+      await expect(fs.stat(legacy)).resolves.toBeDefined();
+    } finally {
+      await fs.rm(privateDir, { recursive: true, force: true });
+    }
   });
 
   test('backup archive does not include _backups/ itself', async () => {
