@@ -87,6 +87,8 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 
+- [x] Hardened the live VPS and provisioning on November 26, 2026. Deployed matched-route authorization and disabled anonymous session persistence in `ba06586`. Patched Node and Caddy, rebooted to the updated Debian 12 kernel, verified separate admin access before revoking app sudo, restricted Caddy administration, and enabled rotation and daily update reporting. Aligned Terraform and UFW without a cloud change. Verified 271 API tests, 264 browser checks, HTTPS with synthetic notes through Caddy, post-reboot health and Syncthing, Ansible syntax, and a no-change Terraform plan. Debian 13 and the existing Syncthing v1 migration remain separate.
+
 - [x] Consolidated production work and documentation on `main` (November 26, 2026): deployed dependency/session-store and editor fixes were already on main. Added the security audit history and integration/deployment plans while preserving production release notes. Unfinished Book Capture remains on `feature/book-capture`; this workspace now uses main.
 
 - [x] Audited live VPS security against Terraform and Ansible (November 25, 2026): confirmed public encoded-path authentication bypass using a missing note ID, unrestricted app-user sudo, stale runtime/running kernel, anonymous session growth, missing log rotation, same-disk backups, local Caddy-admin access, and cloud/IaC sync-port drift. Documented evidence, working controls, limitations, and ordered remediation in `SECURITY_AUDIT.md`. No notes, packages, firewall rules, or service configurations changed; remediation remains pending.

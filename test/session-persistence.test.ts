@@ -109,7 +109,7 @@ describe('session persistence', () => {
     const { cookie } = await login(base1);
 
     // 3. Confirm session works on app1
-    const check1 = await fetch(`${base1}/api/v1/health`, { headers: { Cookie: cookie } });
+    const check1 = await fetch(`${base1}/api/v1/auth/check`, { headers: { Cookie: cookie } });
     expect(check1.ok).toBe(true);
 
     // 4. Shut down app1
@@ -123,7 +123,7 @@ describe('session persistence', () => {
     const base2 = `http://${addr2.address}:${addr2.port}`;
 
     // 6. Same cookie must still authenticate on app2
-    const check2 = await fetch(`${base2}/api/v1/health`, { headers: { Cookie: cookie } });
+    const check2 = await fetch(`${base2}/api/v1/auth/check`, { headers: { Cookie: cookie } });
     expect(check2.ok).toBe(true);
 
     // Verify it's actually checking auth — unauthenticated request should fail on a protected route

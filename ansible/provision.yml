@@ -3,11 +3,24 @@
   hosts: all
   become: true
   tasks:
+    - name: Require a distinct admin account and HTTPS domain
+      ansible.builtin.assert:
+        that:
+          - admin_user != app_user
+          - admin_user != 'root'
+          - domain | length > 0
+
     # ── System packages ──────────────────────────────────────
     - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
+
+    - name: Upgrade installed OS packages without removing packages
+      ansible.builtin.apt:
+        upgrade: safe
+        force_apt_get: true
+        fail_on_autoremove: true
 
     - name: Install base packages
       ansible.builtin.apt:
@@ -22,6 +35,9 @@
           - fail2ban
           - unattended-upgrades
           - apt-listchanges
+          - sudo
+          - logrotate
+          - debian-security-support
         state: present
 
     # ── Automatic security updates ───────────────────────────
@@ -49,6 +65,28 @@
         key: "{{ lookup('file', '~/.ssh/' + lookup('env', 'TF_VAR_ssh_key_name') + '.pub') }}"
         state: present
 
+    - name: Create independent administrative account
+      ansible.builtin.user:
+        name: "{{ admin_user }}"
+        shell: /bin/bash
+        create_home: true
+        password_lock: true
+
+    - name: Authorize the admin SSH public key
+      ansible.posix.authorized_key:
+        user: "{{ admin_user }}"
+        key: "{{ lookup('file', admin_ssh_public_key_file) }}"
+        state: present
+
+    - name: Grant root administration to the key-only admin account
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ admin_user }}"
+        content: "{{ admin_user }} ALL=(root) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
+
     # ── SSH hardening ────────────────────────────────────────
     - name: Disable SSH password authentication
       ansible.builtin.lineinfile:
@@ -74,11 +112,11 @@
         validate: 'sshd -t -f %s'
       notify: Restart sshd
 
-    - name: Restrict SSH to app user
+    - name: Restrict SSH to app and admin users
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
         regexp: '^#?AllowUsers'
-        line: 'AllowUsers {{ app_user }}'
+        line: 'AllowUsers {{ app_user }} {{ admin_user }}'
         validate: 'sshd -t -f %s'
       notify: Restart sshd
 
@@ -148,14 +186,14 @@
     - name: Install Node.js
       ansible.builtin.apt:
         name: nodejs
-        state: present
+        state: latest
         update_cache: true
 
     - name: Install PM2 globally
       community.general.npm:
         name: pm2
         global: true
-        state: present
+        state: latest
 
     # ── App directories ──────────────────────────────────────
     - name: Create app directory
@@ -190,8 +228,30 @@
     - name: Install Caddy
       ansible.builtin.apt:
         name: caddy
-        state: present
+        state: latest
         update_cache: true
+
+    - name: Create the Caddy service drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/system/caddy.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Configure private Caddy admin socket and reload command
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/caddy.service.d/annex-admin-socket.conf
+        content: |
+          [Service]
+          RuntimeDirectory=caddy-admin
+          RuntimeDirectoryMode=0700
+          ExecReload=
+          ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --address unix//run/caddy-admin/admin.sock --force
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Restart Caddy
 
     - name: Deploy Caddyfile
       ansible.builtin.template:
@@ -200,7 +260,8 @@
         owner: root
         group: root
         mode: "0644"
-      notify: Reload Caddy
+        validate: /usr/bin/caddy validate --adapter caddyfile --config %s
+      notify: Restart Caddy
 
     - name: Enable and start Caddy
       ansible.builtin.systemd:
@@ -209,6 +270,17 @@
         state: started
 
     # ── Syncthing ──────────────────────────────────────────
+    - name: Read the installed Syncthing version
+      ansible.builtin.command: dpkg-query -W -f=${Version} syncthing
+      register: syncthing_installed
+      check_mode: false
+      changed_when: false
+      failed_when: syncthing_installed.rc not in [0, 1]
+
+    - name: Select the Syncthing repository channel
+      ansible.builtin.set_fact:
+        syncthing_channel: "{{ syncthing_apt_channel or ('stable' if syncthing_installed.rc == 0 and syncthing_installed.stdout is match('^([0-9]+:)?1[.]') else 'stable-v2') }}"
+
     - name: Add Syncthing GPG key
       ansible.builtin.get_url:
         url: https://syncthing.net/release-key.gpg
@@ -217,14 +289,14 @@
 
     - name: Add Syncthing repository
       ansible.builtin.apt_repository:
-        repo: "deb [signed-by=/usr/share/keyrings/syncthing-archive-keyring.gpg] https://apt.syncthing.net/ syncthing stable"
+        repo: "deb [signed-by=/usr/share/keyrings/syncthing-archive-keyring.gpg] https://apt.syncthing.net/ syncthing {{ syncthing_channel }}"
         state: present
         filename: syncthing
 
     - name: Install Syncthing
       ansible.builtin.apt:
         name: syncthing
-        state: present
+        state: latest
         update_cache: true
 
     - name: Create Syncthing config directory
@@ -253,17 +325,16 @@
       changed_when: false
       failed_when: syncthing_status.stdout != 'active'
 
-    - name: Allow Syncthing sync (TCP)
+    - name: Remove broad Syncthing ingress allowances
       community.general.ufw:
         rule: allow
-        port: "22000"
-        proto: tcp
-
-    - name: Allow Syncthing discovery (UDP)
-      community.general.ufw:
-        rule: allow
-        port: "21027"
-        proto: udp
+        delete: true
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - { port: "22000", proto: tcp }  # TCP sync, previously allowed
+        - { port: "22000", proto: udp }  # QUIC sync
+        - { port: "21027", proto: udp }  # Local discovery, previously allowed
 
     # ── Log rotation ─────────────────────────────────────────
     - name: Deploy logrotate config for annex PM2 logs
@@ -273,6 +344,38 @@
         owner: root
         group: root
         mode: "0644"
+
+    - name: Enable system log rotation timer
+      ansible.builtin.systemd:
+        name: logrotate.timer
+        enabled: true
+        state: started
+
+    - name: Install update status check
+      ansible.builtin.copy:
+        src: files/annex-update-status
+        dest: /usr/local/sbin/annex-update-status
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install the daily update status units
+      ansible.builtin.copy:
+        src: "files/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - annex-update-status.service
+        - annex-update-status.timer
+
+    - name: Enable daily update status reporting
+      ansible.builtin.systemd:
+        name: annex-update-status.timer
+        daemon_reload: true
+        enabled: true
+        state: started
 
     # ── PM2 startup ──────────────────────────────────────────
     - name: Check if PM2 startup is configured
@@ -287,10 +390,11 @@
       changed_when: true
 
   handlers:
-    - name: Reload Caddy
+    - name: Restart Caddy
       ansible.builtin.systemd:
         name: caddy
-        state: reloaded
+        daemon_reload: true
+        state: restarted
 
     - name: Restart sshd
       ansible.builtin.systemd:

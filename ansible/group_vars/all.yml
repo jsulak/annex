@@ -1,8 +1,13 @@
 app_user: annex
+admin_user: annex-admin
+admin_ssh_public_key_file: "~/.ssh/{{ lookup('env', 'TF_VAR_ssh_key_name') }}.pub"
 app_dir: /opt/annex
 notes_dir: /home/annex/notes
 app_port: 3000
 node_version: "24"
+# Fresh installs use stable-v2. Existing v1 hosts keep their current channel
+# until a planned migration explicitly sets syncthing_apt_channel to stable-v2.
+syncthing_apt_channel: ""
 
-# Set to a domain name when DNS is configured, or leave empty to serve on bare IP
+# Provisioning requires the DNS hostname for HTTPS.
 domain: ""

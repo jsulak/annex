@@ -107,21 +107,57 @@ leadership "effective executive" NOT meeting #drucker1967
 
 ## Deployment
 
-Deployment is automated with Terraform (infrastructure) and Ansible (provisioning + deploys), orchestrated via a Makefile. See [SPEC.md](SPEC.md) Section 18 for full details.
+The Makefile runs Terraform to manage infrastructure and Ansible to provision the VPS and deploy the app.
+
+Terraform defaults to `debian-12-x64` to match the existing droplet. Set
+`droplet_image = "debian-13-x64"` in `terraform/terraform.tfvars` or export
+`TF_VAR_droplet_image=debian-13-x64` for a new test droplet with separate Terraform
+state. Changing the image in an existing droplet's configuration triggers
+replacement. Debian 13 provisioning is pending verification.
+[DigitalOcean image catalog](https://docs.digitalocean.com/products/droplets/details/images/)
 
 ```bash
 # 1. Create the droplet + cloud firewall
 make infra-init
 make infra-apply
 
-# 2. Provision the VPS (first time only)
-make provision
+# 2. Pin the new droplet's SSH host key, then provision it
+make wait-for-ssh
+FIRST_RUN=1 make provision
 
 # 3. Deploy the app
 make deploy
 ```
 
-Required environment variables: `DIGITALOCEAN_TOKEN`, `TF_VAR_ssh_key_name`, `SESSION_SECRET`. Copy `deploy.sh.example` to `deploy.sh` and fill in values.
+Copy `deploy.sh.example` to `deploy.sh` and fill in `DIGITALOCEAN_TOKEN`,
+`TF_VAR_ssh_key_name`, and `SESSION_SECRET`. Set the required `DOMAIN` to the
+HTTPS hostname and point its DNS record at the droplet. Keep the wrapper private with
+`chmod 700 deploy.sh`. Keep the same session secret across deployments to
+preserve existing sessions. Deployment uses `DOMAIN` for public HTTPS health checks.
+
+Before the first SSH connection, read `/etc/ssh/ssh_host_ed25519_key.pub` from
+the trusted DigitalOcean console. Add the droplet IP followed by that public
+key on one line in `~/.ssh/known_hosts`. First-time provisioning connects as
+`root`. Later provisioning defaults to the key-only `annex-admin` account.
+
+Provisioning applies safe apt upgrades and selects the latest Node.js 24,
+Caddy, PM2, and Syncthing packages from the configured channels. Fresh
+Syncthing installations use the v2 channel. Existing v1 installations keep
+their channel until a planned migration.
+
+Debian security updates run automatically. The daily `annex-update-status.timer`
+reports pending reboots, failed APT jobs, and available Node.js, Caddy, and
+Syncthing updates to the VPS journal. Review it with
+`sudo journalctl -u annex-update-status.service`. Schedule third-party updates,
+service restarts, and reboots during maintenance. Review and update the app's
+npm lockfile separately so deployment uses tested dependency versions.
+
+`make deploy` and `make push` both build and audit in an isolated local
+directory. The upload contains the compiled server, built client, and npm
+manifests. Deployment stops the running app for dependency installation,
+then restores the previous release if activation or a health check fails.
+If deployment is interrupted or rollback fails, recovery files may remain
+in the private staging directory at `/opt/annex/.annex-deploy.lock`.
 
 ## Project Structure
 
@@ -155,7 +191,7 @@ After deploying, open **Settings** (gear icon or `Cmd+,`) and scroll to the **Sy
 ### After pairing
 
 - The connection status dot in Settings shows **green** when connected, **yellow** when paired but not currently connected.
-- Syncthing runs in the background — changes sync within 1-2 seconds.
+- Syncthing uses outbound connections or relays by default. The cloud firewall and UFW keep direct sync and discovery ingress closed.
 - iCloud syncs from your Mac to iPhone/iPad as before.
 
 ### If Syncthing isn't provisioned

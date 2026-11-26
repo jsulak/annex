@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+export LC_ALL=C
+
+if [ -e /run/reboot-required ]; then
+  echo '<4>Annex VPS requires a reboot to finish package updates.'
+fi
+
+for unit in apt-daily.service apt-daily-upgrade.service; do
+  if systemctl is-failed --quiet "$unit"; then
+    printf '<4>%s failed. Inspect its journal before the next maintenance window.\n' "$unit"
+  fi
+done
+
+policy=$(apt-cache policy nodejs caddy syncthing)
+printf '%s\n' "$policy" | awk '
+  /^[^ ]+:/ { package=$1; sub(/:$/, "", package) }
+  $1 == "Installed:" { installed=$2 }
+  $1 == "Candidate:" && installed != "(none)" && $2 != "(none)" {
+    print package, installed, $2
+  }
+' | while read -r package installed candidate; do
+  if dpkg --compare-versions "$candidate" gt "$installed"; then
+    printf '<4>%s update available (%s to %s).\n' "$package" "$installed" "$candidate"
+  fi
+done
+
+echo 'Annex VPS update status check complete.'

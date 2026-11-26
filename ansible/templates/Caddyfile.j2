@@ -1,4 +1,7 @@
-{% if domain %}
+{
+	admin unix//run/caddy-admin/admin.sock|0600
+}
+
 {{ domain }} {
 	reverse_proxy localhost:{{ app_port }}
 
@@ -11,18 +14,4 @@
 		-Server
 	}
 }
-{% else %}
-:80 {
-	reverse_proxy localhost:{{ app_port }}
-
-	header {
-		X-Content-Type-Options "nosniff"
-		X-Frame-Options "DENY"
-		Referrer-Policy "strict-origin-when-cross-origin"
-		X-Robots-Tag "noindex, nofollow"
-		-Server
-	}
-}
-{% endif %}
-
 import /etc/caddy/conf.d/*.caddy

@@ -1,102 +1,303 @@
 ---
-- name: Build app locally
-  hosts: localhost
-  connection: local
-  gather_facts: false
-
-  tasks:
-    - name: Install dependencies
-      ansible.builtin.command:
-        cmd: npm ci
-        chdir: "{{ playbook_dir }}/.."
-      changed_when: true
-
-    - name: Check for high/critical vulnerabilities
-      ansible.builtin.command:
-        cmd: npm audit --audit-level=high
-        chdir: "{{ playbook_dir }}/.."
-      changed_when: false
-
-    - name: Run npm build
-      ansible.builtin.command:
-        cmd: npm run build
-        chdir: "{{ playbook_dir }}/.."
-      changed_when: true
-
 - name: Deploy to VPS
   hosts: all
+  gather_facts: false
+  serial: 1
+  vars:
+    release_stage: "{{ app_dir }}/.annex-deploy.lock"
+    release_files: dist package.json package-lock.json node_modules ecosystem.config.cjs
+    deploy_domain: "{{ lookup('ansible.builtin.env', 'DOMAIN') or domain | default('') }}"
+    syncthing_config_path: "/home/{{ app_user }}/.local/state/syncthing/config.xml"
   tasks:
-    - name: Validate session_secret is set
-      ansible.builtin.assert:
-        that: session_secret | default('') | length > 0
-        fail_msg: "session_secret is required. Pass via: -e session_secret=..."
-        quiet: true
-
-    - name: Sync app files to remote
-      ansible.posix.synchronize:
-        src: "{{ playbook_dir }}/../"
-        dest: "{{ app_dir }}/"
-        delete: true
-        rsync_opts:
-          - "--exclude=node_modules"
-          - "--exclude=.git"
-          - "--exclude=.env"
-          - "--exclude=ansible"
-          - "--exclude=terraform"
-          - "--exclude=test"
-          - "--exclude=e2e"
-          - "--exclude=src"
-
-    - name: Extract Syncthing API key
-      ansible.builtin.shell: >
-        grep -oP '<apikey>\K[^<]+' /home/{{ app_user }}/.local/state/syncthing/config.xml
-      register: syncthing_api_key
-      changed_when: false
-      failed_when: false
-
-    - name: Template PM2 ecosystem config
-      ansible.builtin.template:
-        src: templates/ecosystem.config.cjs.j2
-        dest: "{{ app_dir }}/ecosystem.config.cjs"
-        mode: "0600"
-
-    - name: Install production dependencies
-      community.general.npm:
-        path: "{{ app_dir }}"
-        ci: true
-        production: true
-
-    - name: Start or restart app
-      ansible.builtin.command:
-        cmd: pm2 startOrRestart ecosystem.config.cjs --update-env
-        chdir: "{{ app_dir }}"
-      changed_when: true
-
-    - name: Save PM2 process list
-      ansible.builtin.command:
-        cmd: pm2 save
-      changed_when: false
-
-    - name: Wait for app to be healthy (localhost)
-      ansible.builtin.uri:
-        url: "http://localhost:{{ app_port }}/api/v1/health"
-        return_content: true
-      register: health
-      until: health.status == 200
-      retries: 10
-      delay: 2
-
-    - name: Smoke test — verify health response is ok
+    - name: Require an exported SESSION_SECRET of at least 32 characters
       ansible.builtin.assert:
         that:
-          - health.json.status == 'ok'
-        fail_msg: "Health check returned unexpected body: {{ health.content }}"
+          - lookup('ansible.builtin.env', 'SESSION_SECRET') | length >= 32
+          - session_secret is undefined
         quiet: true
+      no_log: true
 
-    - name: Smoke test — verify public URL (only when domain is set)
-      ansible.builtin.uri:
-        url: "https://{{ domain }}/api/v1/health"
-        return_content: true
-        status_code: 200
-      register: public_health
-      when: domain | default('') | length > 0
+    - name: Build and deploy a staged release
+      when: not ansible_check_mode
+      block:
+        - name: Create isolated local build directory
+          ansible.builtin.tempfile:
+            state: directory
+            prefix: annex-deploy-
+          delegate_to: localhost
+          register: local_build
+
+        - name: Build, audit, and package deployable artifacts
+          ansible.builtin.shell:
+            cmd: |
+              set -eu
+              unset SESSION_SECRET DIGITALOCEAN_TOKEN TF_VAR_do_token OPENAI_API_KEY
+              umask 022
+              cp -R server src index.html tsconfig.json vite.config.ts package.json package-lock.json "$BUILD_DIR/"
+              # Vite copies public/ verbatim. Use tracked assets from the working tree.
+              git ls-files -z -- public > "$BUILD_DIR/public-files"
+              while IFS= read -r -d '' asset; do
+                test -f "$asset" && test ! -L "$asset" || exit 1
+                mkdir -p "$BUILD_DIR/$(dirname "$asset")"
+                cp "$asset" "$BUILD_DIR/$asset"
+              done < "$BUILD_DIR/public-files"
+              cd "$BUILD_DIR"
+              npm ci --include=dev --no-audit --no-fund
+              npm audit --audit-level=high --include=dev
+              npm run build
+              test -s dist/server/index.js
+              test -s dist/server/setup.js
+              test -s dist/client/index.html
+              test -d dist/client/assets
+              test -z "$(find dist/server dist/client \( -name '.*' -o ! \( -type f -o -type d \) \) -print)"
+              COPYFILE_DISABLE=1 tar -czf release.tar.gz package.json package-lock.json dist/server dist/client
+            chdir: "{{ playbook_dir }}/.."
+            executable: /bin/bash
+          environment:
+            BUILD_DIR: "{{ local_build.path }}"
+          delegate_to: localhost
+          changed_when: true
+
+        - name: Acquire exclusive private staging directory
+          ansible.builtin.command:
+            argv: [mkdir, -m, "0700", "--", "{{ release_stage }}"]
+          register: deploy_lock
+          changed_when: deploy_lock.rc == 0
+
+        - name: Upload the release archive
+          ansible.builtin.copy:
+            src: "{{ local_build.path }}/release.tar.gz"
+            dest: "{{ release_stage }}/release.tar.gz"
+            mode: "0600"
+            decrypt: false
+
+        - name: Extract the release inside staging
+          ansible.builtin.command:
+            argv: [tar, --no-same-owner, -xzf, release.tar.gz]
+            chdir: "{{ release_stage }}"
+          changed_when: true
+
+        - name: Check for Syncthing configuration
+          ansible.builtin.stat:
+            path: "{{ syncthing_config_path }}"
+            follow: true
+            get_checksum: false
+            get_mime: false
+          register: syncthing_config
+
+        - name: Read Syncthing API key
+          ansible.builtin.command:
+            argv:
+              - python3
+              - -c
+              - "import sys, xml.etree.ElementTree as ET; sys.stdout.write(ET.parse(sys.argv[1]).findtext('gui/apikey', ''))"
+              - "{{ syncthing_config_path }}"
+            strip_empty_ends: false
+          register: syncthing_key
+          when: syncthing_config.stat.exists
+          changed_when: false
+          no_log: true
+
+        - name: Render private PM2 configuration
+          ansible.builtin.template:
+            src: templates/ecosystem.config.cjs.j2
+            dest: "{{ release_stage }}/ecosystem.config.cjs"
+            mode: "0600"
+          vars:
+            # Escape apostrophes as JS Unicode escapes. Generate the backslash
+            # after Ansible has parsed the Jinja expression.
+            session_secret: >-
+              {{ (lookup('ansible.builtin.env', 'SESSION_SECRET') | to_json)[1:-1]
+                 | replace("'", '%cu0027' | format(92)) }}
+            syncthing_api_key:
+              stdout: >-
+                {{ ((syncthing_key.stdout | default('')) | to_json)[1:-1]
+                   | replace("'", '%cu0027' | format(92)) }}
+          no_log: true
+          diff: false
+
+        - name: Validate private PM2 configuration syntax
+          ansible.builtin.command:
+            argv: [node, --check, ecosystem.config.cjs]
+            chdir: "{{ release_stage }}"
+          changed_when: false
+          no_log: true
+
+        - name: Check current PM2 process
+          ansible.builtin.command:
+            argv: [pm2, pid, annex]
+          register: previous_app_pid
+          changed_when: false
+          no_log: true
+
+        # Free memory on the small VPS before installing dependencies.
+        - name: Stop the running app before installing dependencies
+          ansible.builtin.command:
+            argv: [pm2, stop, annex]
+          when: previous_app_pid.stdout_lines | last | default('') is match('^[1-9][0-9]*$')
+          register: previous_app_stop
+          changed_when: true
+          no_log: true
+
+        - name: Install staged production dependencies
+          ansible.builtin.command:
+            argv: [npm, ci, --omit=dev, --no-audit, --no-fund]
+            chdir: "{{ release_stage }}"
+          changed_when: true
+
+        - name: Activate only the managed release files
+          ansible.builtin.shell:
+            cmd: |
+              set -eu
+              for entry in {{ release_files }}; do
+                test -e "$RELEASE_STAGE/$entry"
+              done
+              mkdir -- "$RELEASE_STAGE/previous"
+              for entry in {{ release_files }}; do
+                if [ -e "$entry" ] || [ -L "$entry" ]; then
+                  mv -- "$entry" "$RELEASE_STAGE/previous/$entry"
+                fi
+                mv -- "$RELEASE_STAGE/$entry" "$entry"
+              done
+            chdir: "{{ app_dir }}"
+          environment:
+            RELEASE_STAGE: "{{ release_stage }}"
+          changed_when: true
+
+        - name: Start or restart app
+          ansible.builtin.command:
+            argv: [pm2, startOrRestart, ecosystem.config.cjs, --update-env]
+            chdir: "{{ app_dir }}"
+          register: app_start
+          changed_when: true
+          no_log: true
+
+        - name: Wait for a healthy app over loopback
+          ansible.builtin.uri: &loopback_health
+            url: "http://127.0.0.1:{{ app_port }}/api/v1/health"
+            follow_redirects: none
+            timeout: 5
+            use_proxy: false
+            use_netrc: false
+          register: health
+          until: health.status == 200 and (health.json.status | default('')) == 'ok'
+          retries: 10
+          delay: 2
+
+        - name: Verify public HTTPS health when a domain is set
+          ansible.builtin.uri:
+            url: "https://{{ deploy_domain }}/api/v1/health"
+            follow_redirects: none
+            timeout: 5
+            use_proxy: false
+            use_netrc: false
+          delegate_to: localhost
+          when: deploy_domain | length > 0
+          register: public_health
+          until: public_health.status == 200 and (public_health.json.status | default('')) == 'ok'
+          retries: 5
+          delay: 2
+
+        - name: Save the verified PM2 process list
+          ansible.builtin.command:
+            argv: [pm2, save]
+          register: pm2_save
+          changed_when: true
+          no_log: true
+
+      rescue:
+        - name: Keep staging available until rollback succeeds
+          ansible.builtin.set_fact:
+            deploy_recovery_pending: true
+          when: (deploy_lock.rc | default(1)) == 0
+
+        - name: Stop the failed release if PM2 registered it
+          ansible.builtin.shell: |
+            if pm2 describe annex >/dev/null 2>&1; then
+              pm2 stop annex
+            fi
+          when: app_start is defined
+          changed_when: true
+          no_log: true
+
+        - name: Restore the previous managed release files
+          ansible.builtin.shell:
+            cmd: |
+              set -eu
+              if [ -d "$RELEASE_STAGE/previous" ]; then
+                for entry in {{ release_files }}; do
+                  if [ ! -e "$RELEASE_STAGE/$entry" ] && [ ! -L "$RELEASE_STAGE/$entry" ] &&
+                     { [ -e "$entry" ] || [ -L "$entry" ]; }; then
+                    mv -- "$entry" "$RELEASE_STAGE/$entry"
+                  fi
+                  backup="$RELEASE_STAGE/previous/$entry"
+                  if [ -e "$backup" ] || [ -L "$backup" ]; then
+                    mv -- "$backup" "$entry"
+                  fi
+                done
+              fi
+            chdir: "{{ app_dir }}"
+          environment:
+            RELEASE_STAGE: "{{ release_stage }}"
+          when: (deploy_lock.rc | default(1)) == 0
+          changed_when: true
+
+        - name: Restart the previous app if it was running
+          ansible.builtin.command:
+            argv: [pm2, startOrRestart, ecosystem.config.cjs, --update-env]
+            chdir: "{{ app_dir }}"
+          when: previous_app_stop is defined and previous_app_stop is not skipped
+          changed_when: true
+          no_log: true
+
+        - name: Verify the restored app over loopback
+          ansible.builtin.uri: *loopback_health
+          when: previous_app_stop is defined and previous_app_stop is not skipped
+          register: rollback_health
+          until: rollback_health.status == 200 and (rollback_health.json.status | default('')) == 'ok'
+          retries: 10
+          delay: 2
+
+        - name: Remove a failed first-time app registration
+          ansible.builtin.shell: |
+            if pm2 describe annex >/dev/null 2>&1; then
+              pm2 delete annex
+            fi
+          when:
+            - app_start is defined
+            - previous_app_pid.stdout_lines | last | default('') is not match('^[0-9]+$')
+          changed_when: true
+          no_log: true
+
+        - name: Refresh the PM2 process list if the save was attempted
+          ansible.builtin.command:
+            argv: [pm2, save, --force]
+          when: pm2_save is defined
+          changed_when: true
+          no_log: true
+
+        - name: Mark rollback complete
+          ansible.builtin.set_fact:
+            deploy_recovery_pending: false
+
+        - name: Report deployment failure
+          ansible.builtin.fail:
+            msg: "Deployment failed at '{{ ansible_failed_task.name }}'."
+
+      always:
+        - name: Remove the isolated local build directory
+          ansible.builtin.file:
+            path: "{{ local_build.path }}"
+            state: absent
+          delegate_to: localhost
+          when: local_build.path is defined
+          diff: false
+
+        - name: Release staging lock and remove temporary release files
+          ansible.builtin.file:
+            path: "{{ release_stage }}"
+            state: absent
+          when:
+            - (deploy_lock.rc | default(1)) == 0
+            - not (deploy_recovery_pending | default(false))
+          diff: false

@@ -1,0 +1,10 @@
+[Unit]
+Description=Report pending VPS updates and reboot requirements
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/annex-update-status
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true

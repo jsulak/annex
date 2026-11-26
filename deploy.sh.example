@@ -7,12 +7,16 @@ export SESSION_SECRET="change-me-generate-with-openssl-rand-hex-32"
 # SSH key name in DigitalOcean (also used as ~/.ssh/<name> for the private key)
 export TF_VAR_ssh_key_name="your-ssh-key-name"
 
-# Domain name for HTTPS (leave empty to serve on bare IP over HTTP)
+# Debian 12 is the default. Opt into Debian 13 for a new test droplet with separate Terraform state.
+# export TF_VAR_droplet_image="debian-13-x64"
+
+# Required HTTPS hostname. Point its DNS record at the droplet.
 export DOMAIN=""
 
 # ── Usage ─────────────────────────────────────────────────
-# First-time setup (new droplet):
-#   ./deploy.sh init
+# First-time setup (new droplet): create infrastructure and pin its SSH
+# host key in ~/.ssh/known_hosts using the trusted console before provisioning.
+#   ./deploy.sh init  # pauses for host-key pinning
 #
 # Re-provision existing droplet (e.g. update Caddy config):
 #   ./deploy.sh provision
@@ -20,7 +24,7 @@ export DOMAIN=""
 # Deploy the app (full — includes npm ci, PM2 config):
 #   ./deploy.sh deploy
 #
-# Quick push (code-only — build, rsync, restart):
+# Push the app (same artifact deployment as deploy):
 #   ./deploy.sh push
 #
 # Set/reset the login password:
@@ -34,6 +38,8 @@ case "${1:-}" in
   init)
     make infra-init
     make infra-apply
+    echo "Pin the droplet's verified SSH host key in ~/.ssh/known_hosts."
+    read -r -p "Press Enter after pinning the host key. "
     make wait-for-ssh
     FIRST_RUN=1 make provision
     make deploy

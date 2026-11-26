@@ -15,3 +15,14 @@ variable "region" {
   type        = string
   default     = "nyc1"
 }
+
+variable "droplet_image" {
+  description = "Debian image slug for the Annex droplet. Changing it replaces an existing droplet."
+  type        = string
+  default     = "debian-12-x64"
+
+  validation {
+    condition     = contains(["debian-12-x64", "debian-13-x64"], var.droplet_image)
+    error_message = "Use debian-12-x64 or debian-13-x64 for the droplet image."
+  }
+}

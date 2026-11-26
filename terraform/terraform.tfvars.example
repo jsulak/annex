@@ -3,3 +3,6 @@
 
 ssh_key_name = "your-ssh-key-name"
 region       = "nyc1"
+
+# Defaults to debian-12-x64. Use Debian 13 only with separate state for a new droplet test.
+# droplet_image = "debian-13-x64"

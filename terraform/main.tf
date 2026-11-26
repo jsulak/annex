@@ -21,7 +21,7 @@ data "digitalocean_ssh_key" "default" {
 
 resource "digitalocean_droplet" "annex" {
   name     = "annex"
-  image    = "debian-12-x64"
+  image    = var.droplet_image
   size     = "s-1vcpu-512mb-10gb"
   region   = var.region
   ssh_keys = [data.digitalocean_ssh_key.default.id]
@@ -56,18 +56,7 @@ resource "digitalocean_firewall" "annex" {
     source_addresses = ["0.0.0.0/0", "::/0"]
   }
 
-  inbound_rule {
-    protocol         = "tcp"
-    port_range       = "22000"
-    source_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
-  inbound_rule {
-    protocol         = "udp"
-    port_range       = "21027"
-    source_addresses = ["0.0.0.0/0", "::/0"]
-  }
-
+  # Syncthing uses outbound connections and relays by default.
   outbound_rule {
     protocol              = "tcp"
     port_range            = "1-65535"
