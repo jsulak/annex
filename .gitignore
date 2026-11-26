@@ -20,3 +20,4 @@ deploy.sh
 dev.sh
 
 .DS_Store
+/SECURITY_AUDIT.md
