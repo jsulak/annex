@@ -87,6 +87,8 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 
+- [x] Deployed dependency security release `91619c6` (November 25, 2026) from the production branch, excluding unfinished Book Capture. Verified 270 API tests, 264 browser checks, lint, build, deployed manifest/HTML/asset hashes, internal and public HTTPS health, normal unauthenticated API rejection, and zero production npm advisories. Previous app and dependencies retained at `/home/annex/.annex-deploy/rollback-91619c6`. Node remains 24.20.0; infrastructure hardening was outside this release.
+
 - [x] Prepared focused dependency security release (November 25, 2026): ported dependency updates and session-store conditional-save support from `420e2aa`, excluding unfinished Book Capture code and its sharp dependency. Clean install and npm audit report zero vulnerabilities; 270 API tests, lint, and production build pass on Node 24.22.3. Deployment verification will be recorded after release.
 
 - [x] Fixed editor crashes when notes contain multiline link destinations, titles, or image Markdown (November 2026). Multiline constructs retain editable source text, and five browser regressions verify opening, editing, and saving without JavaScript errors. Verified 13 production-branch browser checks, lint, and production build. Released as `ada7b5d` on `main` and deployed to https://annex.boxkitemachine.net. Verified hashes for 123 uploaded public assets, the public entry page and fixed bundle, healthy service after restart, and the affected note loading in Safari with an empty JavaScript console. Previous entry page and assets retained for rollback.

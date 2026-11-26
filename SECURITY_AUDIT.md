@@ -1,5 +1,13 @@
 # Security Audit
 
+## November 25, 2026 production deployment
+
+Deployed focused production release `91619c6` from `main` plus the dependency/session-store fixes in `420e2aa`. Book Capture and its sharp dependency remain unreleased. Preflight verification passed 270 API tests, all 264 production-branch browser checks, lint, build, and clean installation. Both local full-tree and server production-only npm advisory checks reported zero vulnerabilities.
+
+Transferred only compiled output and package manifests into a private staging directory, retained the existing PM2 configuration, and stopped Annex during memory-limited dependency installation on the 457 MiB/no-swap VPS. Previous code and dependencies are retained at `/home/annex/.annex-deploy/rollback-91619c6`. PM2 is online; internal and public HTTPS health returned `ok`. Deployed manifests and HTML matched local SHA-256 hashes; public HTML and all three entry assets matched the release exactly. A normal unauthenticated notes request returned 401. No authenticated production write or note change was performed.
+
+Node remains 24.20.0. OS/runtime updates and the separately documented application/infrastructure vulnerabilities were not remediated by this dependency release.
+
 Date: 2026-06-06
 
 ## Architecture
