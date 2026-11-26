@@ -5,6 +5,10 @@ app_dir: /opt/annex
 notes_dir: /home/annex/notes
 app_port: 3000
 node_version: "24"
+# Standalone deployment CLI. Keep the version and registry archive SHA-256 paired.
+annex_npm_version: "11.21.3"
+annex_npm_sha256: ee5fc68e724c4bdba38db9d96d9c661d4e736e4be7001ae44d2fbbaa52159514
+annex_npm_bin: /usr/local/bin/npm
 # Fresh installs use stable-v2. Existing v1 hosts keep their current channel
 # until a planned migration explicitly sets syncthing_apt_channel to stable-v2.
 syncthing_apt_channel: ""

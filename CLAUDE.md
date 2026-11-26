@@ -87,6 +87,10 @@ Work through these in order. Do not move to the next task until the current one 
 
 ## Current Status
 
+- [x] Upgraded the VPS deployment CLI to npm 11.21.3 on November 26, 2026. Pinned the verified archive in Ansible and tested a clean production dependency install with the deployed lockfile, including native bcrypt. The npm CLI audit fell from 19 advisory matches to two moderate matches. Public health stayed green during the change.
+
+- [x] Removed `SECURITY_AUDIT.md` from Git tracking and added it to `.gitignore`. The full report is available in the local checkout. GitHub `main` has the removal commit.
+
 - [x] Upgraded the live PM2 daemon from 6.0.14 to 7.1.2 on November 26, 2026. Verified systemd restored Annex release `87e58c8`, the 45 installed Linux packages match the audited lockfile, and public HTTPS health and auth checks pass. Restricted PM2 home and saved process-list permissions and carried the directory protection into Ansible. The old package and process list are retained in root-only rollback storage.
 
 - [x] Completed the VPS security follow-up on November 26, 2026. Reviewed retained exposure logs and deployed `87e58c8` through the artifact-only playbook. Moved the credential to mode `0600` private storage, rotated the session secret, introduced host-only production cookies, hardened session revocation and file boundaries, and moved new backups outside the Syncthing tree. Excluded legacy backup archives and disabled automatic folder acceptance on the VPS. Verified 294 API tests, 264 browser checks, local HTTPS, Linux fixture I/O, live service health, and Syncthing convergence. Recorded the global npm findings and separate Syncthing v2 and Debian 13 migration plans in `SECURITY_AUDIT.md`.

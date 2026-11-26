@@ -17,6 +17,14 @@
         quiet: true
       no_log: true
 
+    - name: Check the VPS npm CLI before starting the deployment
+      ansible.builtin.command:
+        argv: ["{{ annex_npm_bin }}", --version]
+      register: vps_npm_version
+      changed_when: false
+      failed_when: vps_npm_version.rc != 0 or vps_npm_version.stdout != annex_npm_version
+      when: not ansible_check_mode
+
     - name: Build and deploy a staged release
       when: not ansible_check_mode
       block:
@@ -141,7 +149,7 @@
 
         - name: Install staged production dependencies
           ansible.builtin.command:
-            argv: [npm, ci, --omit=dev, --no-audit, --no-fund]
+            argv: ["{{ annex_npm_bin }}", ci, --omit=dev, --no-audit, --no-fund]
             chdir: "{{ release_stage }}"
           changed_when: true
 

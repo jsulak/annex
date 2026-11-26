@@ -145,6 +145,10 @@ Caddy, PM2, and Syncthing packages from the configured channels. Fresh
 Syncthing installations use the v2 channel. Existing v1 installations keep
 their channel until a planned migration.
 
+Provisioning installs a checksum-verified npm CLI for VPS deployments.
+To update its pin, change the version and archive checksum together in
+`ansible/group_vars/all.yml`, then provision the host before deploying.
+
 Debian security updates run automatically. The daily `annex-update-status.timer`
 reports pending reboots, failed APT jobs, and available Node.js, Caddy, and
 Syncthing updates to the VPS journal. Review it with

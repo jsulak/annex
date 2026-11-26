@@ -189,9 +189,61 @@
         state: latest
         update_cache: true
 
+    - name: Create directories for the audited npm CLI
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - /var/cache/annex
+        - "/usr/local/lib/annex-npm/{{ annex_npm_version }}"
+
+    - name: Download the checked npm CLI archive
+      ansible.builtin.get_url:
+        url: "https://registry.npmjs.org/npm/-/npm-{{ annex_npm_version }}.tgz"
+        checksum: "sha256:{{ annex_npm_sha256 }}"
+        dest: "/var/cache/annex/npm-{{ annex_npm_version }}.tgz"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install npm alongside the NodeSource package
+      ansible.builtin.unarchive:
+        src: "/var/cache/annex/npm-{{ annex_npm_version }}.tgz"
+        dest: "/usr/local/lib/annex-npm/{{ annex_npm_version }}"
+        remote_src: true
+        owner: root
+        group: root
+        extra_opts: [--no-same-owner, --no-same-permissions]
+
+    - name: Check the standalone npm CLI version
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/node
+          - "/usr/local/lib/annex-npm/{{ annex_npm_version }}/package/bin/npm-cli.js"
+          - --version
+      register: standalone_npm_version
+      changed_when: false
+      failed_when: standalone_npm_version.rc != 0 or standalone_npm_version.stdout != annex_npm_version
+      when: not ansible_check_mode
+
+    - name: Select standalone npm and npx for shell use
+      ansible.builtin.file:
+        src: "/usr/local/lib/annex-npm/{{ annex_npm_version }}/package/bin/{{ item.cli }}-cli.js"
+        dest: "{{ item.path }}"
+        state: link
+        owner: root
+        group: root
+      loop:
+        - { cli: npm, path: "{{ annex_npm_bin }}" }
+        - { cli: npx, path: /usr/local/bin/npx }
+
     - name: Install PM2 globally
       community.general.npm:
         name: pm2
+        executable: "{{ annex_npm_bin }}"
         global: true
         state: latest
 
